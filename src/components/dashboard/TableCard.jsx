@@ -1,0 +1,119 @@
+import {
+  UtensilsCrossed,
+  CheckCircle2,
+  CalendarClock,
+  SprayCan,
+  CreditCard,
+  Users,
+  PlusCircle,
+  MessageCircle,
+} from 'lucide-react';
+import './TableCard.css';
+
+const statusConfig = {
+  occupied: {
+    label: 'Occupied',
+    icon: UtensilsCrossed,
+    timeLabel: 'TIME',
+  },
+  available: {
+    label: 'Available',
+    icon: CheckCircle2,
+    timeLabel: 'TIME',
+  },
+  reserved: {
+    label: 'Reserved',
+    icon: CalendarClock,
+    timeLabel: 'GUEST',
+  },
+  cleaning: {
+    label: 'Cleaning',
+    icon: SprayCan,
+    timeLabel: 'WAIT',
+  },
+  payment: {
+    label: 'Payment Pending',
+    icon: MessageCircle,
+    timeLabel: 'SESSION',
+  },
+};
+
+function getCapacityVariant(seated, capacity) {
+  if (seated === 0) return 'empty';
+  if (seated >= capacity) return 'full';
+  return 'partial';
+}
+
+function TableCard({ table, onClick }) {
+  const config = statusConfig[table?.status] || statusConfig.available;
+  const StatusIcon = config.icon;
+  const seated = table?.seated || 0;
+  const capacity = table?.capacity || 1;
+  const capacityVariant = getCapacityVariant(seated, capacity);
+
+  const getSecondaryValue = () => {
+    if (table.status === 'reserved') return table.guest;
+    if (table.status === 'cleaning') return table.time;
+    if (table.status === 'payment') return table.time;
+    return table.time;
+  };
+
+  const getStatusDisplay = () => {
+    if (table.status === 'reserved') {
+      return `Reserved (${table.time})`;
+    }
+    return config.label;
+  };
+
+  return (
+    <div
+      className={`table-card table-card--${table.status}`}
+      onClick={() => onClick && onClick(table)}
+      id={`table-card-${table.id}`}
+    >
+      {/* Header */}
+      <div className="table-card__header">
+        <span className="table-card__id">{table.id}</span>
+        <div className={`table-card__capacity table-card__capacity--${capacityVariant}`}>
+          <Users />
+          {table.seated}/{table.capacity}
+        </div>
+      </div>
+
+      {/* Body */}
+      <div className="table-card__body">
+        <div className="table-card__field">
+          <span className="table-card__field-label">STATUS</span>
+          <span className={`table-card__field-value table-card__field-value--${table.status}`}>
+            {getStatusDisplay()}
+          </span>
+        </div>
+
+        <div className="table-card__field">
+          <span className="table-card__field-label">{config.timeLabel}</span>
+          <span className="table-card__field-value">
+            {getSecondaryValue()}
+          </span>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="table-card__footer">
+        <div className={`table-card__footer-icon table-card__footer-icon--${table.status}`}>
+          <StatusIcon />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function NewTableCard({ onClick }) {
+  return (
+    <div className="table-card table-card--new" onClick={onClick} id="btn-new-table">
+      <PlusCircle />
+      <span>New Table</span>
+    </div>
+  );
+}
+
+export { TableCard, NewTableCard };
