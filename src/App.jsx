@@ -4,6 +4,7 @@ import TopBar from './components/common/TopBar';
 import TableDashboard from './pages/TableDashboard';
 import TableManagement from './pages/TableManagement';
 import WaitingList from './pages/WaitingList';
+import NotificationToast from './components/common/NotificationToast';
 import { RestaurantProvider } from './context/RestaurantContext';
 import './App.css';
 
@@ -23,9 +24,11 @@ function App() {
             </Routes>
           </div>
         </main>
+        <NotificationToast />
       </div>
     </RestaurantProvider>
   );
 }
 
 export default App;
+

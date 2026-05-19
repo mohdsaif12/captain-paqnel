@@ -211,6 +211,27 @@ export function RestaurantProvider({ children }) {
     }
   };
 
+  const createWaiterCall = async (callData) => {
+    try {
+      const { tableNumber, customerName, message } = callData;
+      const { error } = await supabase
+        .from('waiter_calls')
+        .insert([{
+          table_number: tableNumber,
+          customer_name: customerName || 'Guest',
+          request_type: message || 'Call Waiter',
+          request_status: 'pending'
+        }]);
+
+      if (error) throw error;
+      await fetchData();
+      return { success: true };
+    } catch (err) {
+      console.error('Error creating waiter call:', err);
+      return { success: false, error: err.message };
+    }
+  };
+
   return (
     <RestaurantContext.Provider value={{ 
       tables, 
@@ -223,6 +244,7 @@ export function RestaurantProvider({ children }) {
       refresh: fetchData,
       assignTable,
       addToWaitlist,
+      createWaiterCall,
       completeWaiterCall: async (callId) => {
         await supabase.from('waiter_calls').update({ request_status: 'completed', completed_at: new Date().toISOString() }).eq('id', callId);
         await fetchData();
