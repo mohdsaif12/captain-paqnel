@@ -9,8 +9,9 @@ import {
 } from 'lucide-react';
 import './WaitlistEntry.css';
 
-function WaitlistEntry({ entry, onAssign }) {
+function WaitlistEntry({ entry, index, onAssign }) {
   const isNext = entry.isNext;
+  const position = index !== undefined ? index + 1 : 1;
 
   return (
     <div
@@ -26,7 +27,7 @@ function WaitlistEntry({ entry, onAssign }) {
         }`}
       >
         <span className="waitlist-entry__position-label">POS</span>
-        <span className="waitlist-entry__position-number">#{entry.id}</span>
+        <span className="waitlist-entry__position-number">#{position}</span>
       </div>
 
       {/* Content */}

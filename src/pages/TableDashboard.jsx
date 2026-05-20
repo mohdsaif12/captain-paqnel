@@ -4,29 +4,64 @@ import StatCard from '../components/common/StatCard';
 import FilterTabs from '../components/dashboard/FilterTabs';
 import { TableCard, NewTableCard } from '../components/dashboard/TableCard';
 import WaitlistPreview from '../components/dashboard/WaitlistPreview';
+import PriorityCallsList from '../components/dashboard/PriorityCallsList';
 import AssignTableModal from '../components/modals/AssignTableModal';
+import TableDetailPanel from '../components/table-management/TableDetailPanel';
 import { useRestaurant } from '../context/RestaurantContext';
 import './TableDashboard.css';
 
 function TableDashboard() {
   const [showModal, setShowModal] = useState(false);
+  const [showDetail, setShowDetail] = useState(false);
   const [selectedTable, setSelectedTable] = useState(null);
-  const { tables, stats, loading, error, assignTable } = useRestaurant();
+  const [assigningEntry, setAssigningEntry] = useState(null);
+  const { tables, stats, loading, error, assignTable, addToWaitlist } = useRestaurant();
 
   const handleTableClick = (table) => {
+    setSelectedTable(table);
     if (table.status === 'available') {
-      setSelectedTable(table);
       setShowModal(true);
+      setShowDetail(false);
+    } else {
+      setShowDetail(true);
+      setShowModal(false);
     }
   };
 
+  const handleAssignFromWaitlist = (entry) => {
+    setAssigningEntry(entry);
+    setSelectedTable(null);
+    setShowModal(true);
+    setShowDetail(false);
+  };
+
   const handleAssign = async (data) => {
-    const result = await assignTable(selectedTable.dbId, data);
-    if (result.success) {
-      setShowModal(false);
-      setSelectedTable(null);
+    if (selectedTable) {
+      const result = await assignTable(selectedTable.dbId, data);
+      if (result.success) {
+        setShowModal(false);
+        setSelectedTable(null);
+      } else {
+        alert('Failed to assign table: ' + result.error);
+      }
+    } else if (assigningEntry) {
+      const result = await assignTable(data.tableId, {
+        ...data,
+        waitlistId: assigningEntry.id
+      });
+      if (result.success) {
+        setShowModal(false);
+        setAssigningEntry(null);
+      } else {
+        alert('Failed to assign table: ' + result.error);
+      }
     } else {
-      alert('Failed to assign table: ' + result.error);
+      const result = await addToWaitlist(data);
+      if (result.success) {
+        setShowModal(false);
+      } else {
+        alert('Failed to add to waitlist: ' + result.error);
+      }
     }
   };
 
@@ -39,7 +74,7 @@ function TableDashboard() {
   }
 
   return (
-    <div className="table-dashboard" id="table-dashboard-page">
+    <div className={`table-dashboard ${selectedTable && showDetail ? 'table-dashboard--with-panel' : ''}`} id="table-dashboard-page">
       {/* Stats */}
       <div className="table-dashboard__stats">
         <StatCard label="Total Tables" value={stats.totalTables} icon={Grid3X3} variant="total" />
@@ -55,7 +90,9 @@ function TableDashboard() {
           className="table-dashboard__add-btn"
           onClick={() => {
             setSelectedTable(null);
+            setAssigningEntry(null);
             setShowModal(true);
+            setShowDetail(false);
           }}
           id="btn-add-to-waitlist"
         >
@@ -72,18 +109,38 @@ function TableDashboard() {
         <NewTableCard onClick={() => {}} />
       </div>
 
-      {/* Upcoming Waitlist */}
-      <WaitlistPreview />
+      {/* Lists */}
+      <div className="table-dashboard__lists">
+        <WaitlistPreview onAssign={handleAssignFromWaitlist} />
+        <PriorityCallsList />
+      </div>
 
       {/* Assign Table Modal */}
       {showModal && (
         <AssignTableModal
           table={selectedTable}
+          initialData={assigningEntry ? {
+            customerName: assigningEntry.name,
+            numberOfPeople: assigningEntry.people.toString(),
+            preference: assigningEntry.preference
+          } : null}
           onClose={() => {
             setShowModal(false);
             setSelectedTable(null);
+            setAssigningEntry(null);
           }}
           onAssign={handleAssign}
+        />
+      )}
+
+      {/* Table Detail Panel */}
+      {showDetail && selectedTable && (
+        <TableDetailPanel
+          table={selectedTable}
+          onClose={() => {
+            setShowDetail(false);
+            setSelectedTable(null);
+          }}
         />
       )}
     </div>

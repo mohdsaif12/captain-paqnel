@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useRestaurant } from '../../context/RestaurantContext';
 import './WaitlistPreview.css';
 
-function WaitlistPreview() {
+function WaitlistPreview({ onAssign }) {
   const navigate = useNavigate();
   const { waitingList = [], stats = { waiting: 0 } } = useRestaurant();
 
@@ -32,7 +32,12 @@ function WaitlistPreview() {
       <div className="waitlist-preview__cards">
         {waitingList && waitingList.length > 0 ? (
           waitingList.slice(0, 2).map((guest) => (
-            <div key={guest.id} className="waitlist-preview__card">
+            <div 
+              key={guest.id} 
+              className="waitlist-preview__card"
+              onClick={() => onAssign && onAssign(guest)}
+              id={`waitlist-preview-card-${guest.id}`}
+            >
               <div className="waitlist-preview__avatar">{getInitials(guest.name)}</div>
               <div className="waitlist-preview__info">
                 <span className="waitlist-preview__name">{guest.name}</span>

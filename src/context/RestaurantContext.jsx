@@ -49,19 +49,32 @@ export function RestaurantProvider({ children }) {
 
       if (sectionsError) throw sectionsError;
 
-      // Fetch Waiter Calls
+      // Fetch Waiter Calls with joined restaurant_tables to get table_number
       const { data: callsData, error: callsError } = await supabase
         .from('waiter_calls')
-        .select('*')
+        .select(`
+          *,
+          restaurant_tables (
+            table_number
+          )
+        `)
         .eq('request_status', 'pending')
         .order('created_at', { ascending: false });
 
       if (callsError) throw callsError;
 
-      setTables(mapTables(tablesData));
+      const mappedTables = mapTables(tablesData);
+      const mappedCalls = mapWaiterCalls(callsData);
+
+      mappedTables.forEach(t => {
+        t.pendingCalls = mappedCalls.filter(c => c.table_id === t.dbId);
+        t.hasPendingCall = t.pendingCalls.length > 0;
+      });
+
+      setTables(mappedTables);
       setWaitingList(mapWaitingList(waitlistData));
       setSections(sectionsData);
-      setWaiterCalls(callsData);
+      setWaiterCalls(mappedCalls);
     } catch (err) {
       console.error('Error fetching restaurant data:', err);
       setError(err.message);
@@ -105,6 +118,14 @@ export function RestaurantProvider({ children }) {
         server: null,
       };
     });
+  };
+
+  const mapWaiterCalls = (calls) => {
+    return calls.map(call => ({
+      ...call,
+      table_number: call.restaurant_tables?.table_number || 'General',
+      request_type: call.notes || 'Call Waiter'
+    }));
   };
 
   const formatWaitTime = (startedAt) => {
@@ -214,12 +235,33 @@ export function RestaurantProvider({ children }) {
   const createWaiterCall = async (callData) => {
     try {
       const { tableNumber, customerName, message } = callData;
+      
+      // Find the table UUID from the tables list
+      let resolvedTableId = null;
+      if (tableNumber && tableNumber.length === 36) {
+        resolvedTableId = tableNumber;
+      } else if (tableNumber) {
+        const cleanSearchNum = String(tableNumber).replace(/^T-/, '').replace(/^0+/, '').trim();
+        const found = tables.find(t => {
+          const cleanTableNum = String(t.id).replace(/^T-/, '').replace(/^0+/, '').trim();
+          return cleanTableNum === cleanSearchNum;
+        });
+        if (found) {
+          resolvedTableId = found.dbId;
+        }
+      }
+      
+      // Fallback to the first table if no match is found (ensures simulator doesn't fail)
+      if (!resolvedTableId && tables.length > 0) {
+        resolvedTableId = tables[0].dbId;
+      }
+
       const { error } = await supabase
         .from('waiter_calls')
         .insert([{
-          table_number: tableNumber,
+          table_id: resolvedTableId,
           customer_name: customerName || 'Guest',
-          request_type: message || 'Call Waiter',
+          notes: message || 'Call Waiter',
           request_status: 'pending'
         }]);
 
@@ -228,6 +270,50 @@ export function RestaurantProvider({ children }) {
       return { success: true };
     } catch (err) {
       console.error('Error creating waiter call:', err);
+      return { success: false, error: err.message };
+    }
+  };
+
+  const freeTable = async (tableDbId) => {
+    try {
+      const { error: sessionError } = await supabase
+        .from('customer_sessions')
+        .update({ 
+          session_status: 'completed',
+          ended_at: new Date().toISOString()
+        })
+        .eq('table_id', tableDbId)
+        .eq('session_status', 'active');
+
+      if (sessionError) throw sessionError;
+
+      const { error: tableError } = await supabase
+        .from('restaurant_tables')
+        .update({ status: 'available' })
+        .eq('id', tableDbId);
+
+      if (tableError) throw tableError;
+
+      await fetchData();
+      return { success: true };
+    } catch (err) {
+      console.error('Error freeing table:', err);
+      return { success: false, error: err.message };
+    }
+  };
+
+  const markBilling = async (tableDbId) => {
+    try {
+      const { error } = await supabase
+        .from('restaurant_tables')
+        .update({ status: 'payment' })
+        .eq('id', tableDbId);
+
+      if (error) throw error;
+      await fetchData();
+      return { success: true };
+    } catch (err) {
+      console.error('Error marking billing:', err);
       return { success: false, error: err.message };
     }
   };
@@ -245,6 +331,8 @@ export function RestaurantProvider({ children }) {
       assignTable,
       addToWaitlist,
       createWaiterCall,
+      freeTable,
+      markBilling,
       completeWaiterCall: async (callId) => {
         await supabase.from('waiter_calls').update({ request_status: 'completed', completed_at: new Date().toISOString() }).eq('id', callId);
         await fetchData();

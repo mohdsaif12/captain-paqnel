@@ -206,3 +206,49 @@
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
 }
+
+/* ---- Active Waiter Call Badge ---- */
+.table-card--has-call {
+  box-shadow: 0 0 0 2px var(--color-occupied) !important;
+  animation: border-pulse 2s infinite;
+}
+
+@keyframes border-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 2px var(--color-occupied);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(217, 75, 75, 0.4);
+  }
+}
+
+.table-card__bell-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-full);
+  background-color: var(--color-occupied);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-sm);
+  z-index: 10;
+  animation: badge-pulse 2s infinite;
+}
+
+@keyframes badge-pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.15);
+  }
+}
+
+.table-card__bell-badge svg {
+  width: 12px;
+  height: 12px;
+}

@@ -48,3 +48,26 @@
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: var(--space-4);
 }
+
+/* ---- Layout Shift with Detail Panel ---- */
+.table-dashboard {
+  transition: margin-right var(--transition-slow);
+}
+
+.table-dashboard--with-panel {
+  margin-right: 380px;
+}
+
+/* ---- Bottom Lists Grid ---- */
+.table-dashboard__lists {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-6);
+  align-items: start;
+}
+
+@media (min-width: 1024px) {
+  .table-dashboard__lists {
+    grid-template-columns: 1fr 1fr;
+  }
+}

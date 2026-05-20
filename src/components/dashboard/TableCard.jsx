@@ -7,6 +7,7 @@ import {
   Users,
   PlusCircle,
   MessageCircle,
+  Bell,
 } from 'lucide-react';
 import './TableCard.css';
 
@@ -67,10 +68,17 @@ function TableCard({ table, onClick }) {
 
   return (
     <div
-      className={`table-card table-card--${table.status}`}
+      className={`table-card table-card--${table.status} ${table.hasPendingCall ? 'table-card--has-call' : ''}`}
       onClick={() => onClick && onClick(table)}
       id={`table-card-${table.id}`}
     >
+      {/* Pulsing Bell Badge if there is a pending waiter call */}
+      {table.hasPendingCall && (
+        <div className="table-card__bell-badge" title="Active Waiter Call!">
+          <Bell size={12} className="animate-pulse" />
+        </div>
+      )}
+
       {/* Header */}
       <div className="table-card__header">
         <span className="table-card__id">{table.id}</span>

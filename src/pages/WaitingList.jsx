@@ -76,8 +76,8 @@ function WaitingList() {
       {/* List */}
       <div className="waiting-list-page__list" id="waitlist-entries">
         {waitingList && waitingList.length > 0 ? (
-          waitingList.map((entry) => (
-            <WaitlistEntry key={entry.id} entry={entry} onAssign={handleAssign} />
+          waitingList.map((entry, index) => (
+            <WaitlistEntry key={entry.id} entry={entry} index={index} onAssign={handleAssign} />
           ))
         ) : (
           <div className="empty-waitlist">No customers currently waiting.</div>
