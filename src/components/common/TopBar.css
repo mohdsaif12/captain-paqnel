@@ -136,3 +136,19 @@
 .topbar__avatar:hover {
   transform: scale(1.05);
 }
+
+/* ---- TopBar Responsiveness ---- */
+@media (max-width: 1024px) {
+  .topbar__status {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .topbar {
+    padding: 0 var(--space-4);
+  }
+  .topbar__search {
+    min-width: 120px;
+  }
+}

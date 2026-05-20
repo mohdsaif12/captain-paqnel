@@ -6,8 +6,15 @@
 
 /* ---- Stats Row ---- */
 .table-dashboard__stats {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: var(--space-4);
+}
+
+@media (min-width: 768px) {
+  .table-dashboard__stats {
+    grid-template-columns: repeat(4, 1fr);
+  }
 }
 
 /* ---- Toolbar ---- */
@@ -54,8 +61,10 @@
   transition: margin-right var(--transition-slow);
 }
 
-.table-dashboard--with-panel {
-  margin-right: 380px;
+@media (min-width: 1024px) {
+  .table-dashboard--with-panel {
+    margin-right: 380px;
+  }
 }
 
 /* ---- Bottom Lists Grid ---- */
