@@ -127,3 +127,57 @@
   font-size: var(--font-size-base);
   text-align: center;
 }
+
+/* Clickable Call Cards */
+.priority-call-card--clickable {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.priority-call-card--clickable:hover {
+  border-color: rgba(245, 158, 11, 0.4);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.1);
+  transform: translateY(-1px);
+}
+
+/* SOS Call Card Styles */
+.priority-call-card--sos {
+  background: rgba(30, 16, 20, 0.4);
+  border-color: rgba(239, 68, 68, 0.2);
+}
+
+.priority-call-card--sos::before {
+  background: #ef4444 !important;
+}
+
+.priority-call-card__avatar--sos {
+  background: rgba(239, 68, 68, 0.15) !important;
+  color: #ef4444 !important;
+}
+
+.priority-call-sos-badge {
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 1px 6px;
+  border-radius: 4px;
+  margin-left: var(--space-2);
+  display: inline-block;
+  vertical-align: middle;
+  letter-spacing: 0.05em;
+  animation: flashBadge 1s infinite alternate;
+}
+
+.priority-call-card__lock {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ef4444;
+  flex-shrink: 0;
+}

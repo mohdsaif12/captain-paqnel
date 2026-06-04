@@ -1,6 +1,6 @@
 import { ArrowUpRight, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useRestaurant } from '../../context/RestaurantContext';
+import { useRestaurant } from '../../context/useRestaurant';
 import './WaitlistPreview.css';
 
 function WaitlistPreview({ onAssign }) {

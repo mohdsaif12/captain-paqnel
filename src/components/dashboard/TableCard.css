@@ -133,7 +133,13 @@
 .table-card__footer {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
+  gap: var(--space-2);
   margin-top: auto;
+}
+
+.table-card__footer:has(.table-card__order-btn) {
+  justify-content: space-between;
 }
 
 .table-card__footer-icon {
@@ -251,4 +257,38 @@
 .table-card__bell-badge svg {
   width: 12px;
   height: 12px;
+}
+
+/* ---- Create Order Table Action Button ---- */
+.table-card__order-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: 6px var(--space-3);
+  background: var(--color-primary-subtle);
+  border: 1px solid var(--color-primary-light);
+  color: var(--color-primary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+  cursor: pointer;
+}
+
+.table-card__order-btn:hover {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-text-inverse);
+  box-shadow: 0 2px 6px rgba(139, 94, 60, 0.2);
+}
+
+.table-card__order-btn svg {
+  width: 12px;
+  height: 12px;
+}
+
+.table-card__field-value--subtotal {
+  color: var(--color-primary);
+  font-weight: var(--font-weight-bold);
 }

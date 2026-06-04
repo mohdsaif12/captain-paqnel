@@ -1,5 +1,48 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, isMockMode } from '../lib/supabase';
+import { 
+  tables as mockTables, 
+  waitlistData as mockWaitlistData 
+} from '../data/mockData';
+
+const defaultMockSections = [
+  { id: 1, section_name: 'Darbar Area' },
+  { id: 2, section_name: 'Terrace' },
+  { id: 3, section_name: 'Lounge Bar' },
+  { id: 4, section_name: 'VIP Cabin' }
+];
+
+const loadMockData = () => {
+  let tables = localStorage.getItem('mock_tables');
+  if (tables) {
+    tables = JSON.parse(tables);
+  } else {
+    tables = mockTables.map(t => ({
+      ...t,
+      dbId: t.id,
+      startedAt: t.status === 'occupied' ? new Date(Date.now() - 45 * 60 * 1000).toISOString() : null
+    }));
+    localStorage.setItem('mock_tables', JSON.stringify(tables));
+  }
+
+  let waitlist = localStorage.getItem('mock_waitlist');
+  if (waitlist) {
+    waitlist = JSON.parse(waitlist);
+  } else {
+    waitlist = mockWaitlistData.map(item => {
+      const waitTimeMins = parseInt(item.waitTime) || 15;
+      return {
+        ...item,
+        addedAt: new Date(Date.now() - waitTimeMins * 60 * 1000).toISOString()
+      };
+    });
+    localStorage.setItem('mock_waitlist', JSON.stringify(waitlist));
+  }
+
+  const sections = defaultMockSections;
+
+  return { tables, waitlist, sections };
+};
 
 export function useRestaurantData() {
   const [tables, setTables] = useState([]);
@@ -9,6 +52,51 @@ export function useRestaurantData() {
   const [error, setError] = useState(null);
 
   const fetchData = async () => {
+    if (isMockMode) {
+      try {
+        setLoading(true);
+        const data = loadMockData();
+        
+        const now = new Date();
+        const updatedTables = data.tables.map(t => {
+          if (t.startedAt) {
+            const start = new Date(t.startedAt);
+            const diffMins = Math.floor((now - start) / 60000);
+            let timeStr = '--';
+            if (diffMins < 60) {
+              timeStr = `${diffMins} mins`;
+            } else {
+              const hrs = Math.floor(diffMins / 60);
+              const mins = diffMins % 60;
+              timeStr = `${hrs}h ${mins}m`;
+            }
+            return { ...t, time: timeStr };
+          }
+          return t;
+        });
+
+        const updatedWaitlist = data.waitlist.map((item, index) => {
+          const addedAt = new Date(item.addedAt);
+          const diffMins = Math.floor((now - addedAt) / 60000);
+          return {
+            ...item,
+            waitTime: `${diffMins}m`,
+            isNext: index === 0
+          };
+        });
+
+        setTables(updatedTables);
+        setWaitingList(updatedWaitlist);
+        setSections(data.sections);
+      } catch (err) {
+        console.error('Error fetching mock data:', err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
     try {
       setLoading(true);
       
@@ -90,6 +178,13 @@ export function useRestaurantData() {
 
   useEffect(() => {
     fetchData();
+
+    if (isMockMode) {
+      const interval = setInterval(() => {
+        fetchData();
+      }, 15000);
+      return () => clearInterval(interval);
+    }
 
     // Subscribe to changes
     const tablesSubscription = supabase

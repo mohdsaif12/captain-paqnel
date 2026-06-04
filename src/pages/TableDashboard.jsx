@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Grid3X3, CheckCircle2, AlertCircle, Clock, UserPlus } from 'lucide-react';
 import StatCard from '../components/common/StatCard';
 import FilterTabs from '../components/dashboard/FilterTabs';
@@ -7,12 +8,13 @@ import WaitlistPreview from '../components/dashboard/WaitlistPreview';
 import PriorityCallsList from '../components/dashboard/PriorityCallsList';
 import AssignTableModal from '../components/modals/AssignTableModal';
 import TableDetailPanel from '../components/table-management/TableDetailPanel';
-import { useRestaurant } from '../context/RestaurantContext';
+import { useRestaurant } from '../context/useRestaurant';
 import './TableDashboard.css';
 
 function TableDashboard() {
   const [showModal, setShowModal] = useState(false);
   const [showDetail, setShowDetail] = useState(false);
+  const navigate = useNavigate();
   const [selectedTable, setSelectedTable] = useState(null);
   const [assigningEntry, setAssigningEntry] = useState(null);
   const { tables, stats, loading, error, assignTable, addToWaitlist } = useRestaurant();
@@ -104,7 +106,14 @@ function TableDashboard() {
       {/* Table Grid */}
       <div className="table-dashboard__grid" id="dashboard-table-grid">
         {tables.map((table) => (
-          <TableCard key={table.dbId} table={table} onClick={handleTableClick} />
+          <TableCard
+            key={table.dbId}
+            table={table}
+            onClick={handleTableClick}
+            onClickOrder={(t) => {
+              navigate(`/menu?tableId=${t.dbId}&sessionId=${t.sessionId || 'session-' + t.id}`);
+            }}
+          />
         ))}
         <NewTableCard onClick={() => {}} />
       </div>

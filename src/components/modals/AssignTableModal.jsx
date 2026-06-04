@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { X, User, Phone, Armchair } from 'lucide-react';
-import { useRestaurant } from '../../context/RestaurantContext';
+import { useRestaurant } from '../../context/useRestaurant';
 import './AssignTableModal.css';
 
 function AssignTableModal({ table, onClose, onAssign, initialData }) {

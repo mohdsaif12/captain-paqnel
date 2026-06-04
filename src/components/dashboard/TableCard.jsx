@@ -45,12 +45,14 @@ function getCapacityVariant(seated, capacity) {
   return 'partial';
 }
 
-function TableCard({ table, onClick }) {
+function TableCard({ table, onClick, onClickOrder }) {
   const config = statusConfig[table?.status] || statusConfig.available;
   const StatusIcon = config.icon;
   const seated = table?.seated || 0;
   const capacity = table?.capacity || 1;
   const capacityVariant = getCapacityVariant(seated, capacity);
+
+  const subtotal = (table?.orders || []).reduce((sum, item) => sum + item.qty * item.price, 0);
 
   const getSecondaryValue = () => {
     if (table.status === 'reserved') return table.guest;
@@ -103,10 +105,32 @@ function TableCard({ table, onClick }) {
             {getSecondaryValue()}
           </span>
         </div>
+
+        {subtotal > 0 && (
+          <div className="table-card__field">
+            <span className="table-card__field-label">SUBTOTAL</span>
+            <span className="table-card__field-value table-card__field-value--subtotal">
+              ${subtotal.toFixed(2)}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Footer */}
       <div className="table-card__footer">
+        {table.status === 'occupied' && (
+          <button
+            className="table-card__order-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              onClickOrder && onClickOrder(table);
+            }}
+            id={`btn-table-order-${table.id}`}
+          >
+            <UtensilsCrossed size={12} />
+            Create Order
+          </button>
+        )}
         <div className={`table-card__footer-icon table-card__footer-icon--${table.status}`}>
           <StatusIcon />
         </div>

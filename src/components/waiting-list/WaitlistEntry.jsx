@@ -6,6 +6,7 @@ import {
   Pin,
   X,
   Info,
+  MessageSquare,
 } from 'lucide-react';
 import './WaitlistEntry.css';
 
@@ -62,6 +63,14 @@ function WaitlistEntry({ entry, index, onAssign }) {
           <div className="waitlist-entry__suggestion">
             <Info />
             <span>Suggested: {entry?.suggestion}</span>
+          </div>
+        )}
+
+        {entry?.notes && (
+          <div className="waitlist-entry__notes">
+            <MessageSquare />
+            <span className="waitlist-entry__notes-label">Remark:</span>
+            <span className="waitlist-entry__notes-content">{entry.notes}</span>
           </div>
         )}
       </div>

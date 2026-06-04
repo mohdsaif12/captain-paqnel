@@ -3,7 +3,7 @@ import { UserPlus } from 'lucide-react';
 import WaitlistEntry from '../components/waiting-list/WaitlistEntry';
 import WaitlistStats from '../components/waiting-list/WaitlistStats';
 import AssignTableModal from '../components/modals/AssignTableModal';
-import { useRestaurant } from '../context/RestaurantContext';
+import { useRestaurant } from '../context/useRestaurant';
 import './WaitingList.css';
 
 function WaitingList() {
@@ -94,7 +94,8 @@ function WaitingList() {
           initialData={assigningEntry ? {
             customerName: assigningEntry.name,
             numberOfPeople: assigningEntry.people.toString(),
-            preference: assigningEntry.preference
+            preference: assigningEntry.preference,
+            specialNote: assigningEntry.notes
           } : null}
           onClose={() => {
             setShowModal(false);

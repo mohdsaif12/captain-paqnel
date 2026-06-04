@@ -164,3 +164,71 @@
     width: calc(100% - 32px);
   }
 }
+
+/* Clickable hover state for normal calls */
+.notification-toast--clickable {
+  cursor: pointer;
+}
+
+.notification-toast--clickable:hover {
+  border-color: rgba(245, 158, 11, 0.6);
+  box-shadow: 0 12px 30px -5px rgba(0, 0, 0, 0.6), 0 0 20px rgba(245, 158, 11, 0.25);
+  transform: translateY(-2px);
+}
+
+/* SOS Toast Customizations */
+.notification-toast--sos {
+  background: rgba(30, 16, 20, 0.9);
+  border-color: rgba(239, 68, 68, 0.4);
+  border-left: 4px solid #ef4444;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 0 15px rgba(239, 68, 68, 0.2);
+  animation: slideInToast 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards, pulseSosBorder 2s infinite ease-in-out;
+}
+
+.notification-toast--sos::before {
+  background: linear-gradient(90deg, rgba(239, 68, 68, 0.08) 0%, rgba(255, 255, 255, 0) 100%);
+}
+
+.notification-toast__icon--sos {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  animation: ringBell 1.5s infinite ease-in-out;
+}
+
+.sos-badge {
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 0.65rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 800;
+  margin-left: 8px;
+  letter-spacing: 0.05em;
+  display: inline-block;
+  vertical-align: middle;
+  animation: flashBadge 1s infinite alternate;
+}
+
+.notification-toast__lock {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  align-self: center;
+}
+
+@keyframes pulseSosBorder {
+  0%, 100% { border-color: rgba(239, 68, 68, 0.4); }
+  50% { border-color: rgba(239, 68, 68, 0.85); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 0 25px rgba(239, 68, 68, 0.4); }
+}
+
+@keyframes flashBadge {
+  0% { opacity: 0.6; }
+  100% { opacity: 1; }
+}

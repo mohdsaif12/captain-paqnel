@@ -1,15 +1,18 @@
+import { useNavigate } from 'react-router-dom';
 import {
   X,
   ArrowRightLeft,
   Receipt,
   Unlock,
   StickyNote,
+  UtensilsCrossed,
 } from 'lucide-react';
-import { useRestaurant } from '../../context/RestaurantContext';
+import { useRestaurant } from '../../context/useRestaurant';
 import './TableDetailPanel.css';
 
 function TableDetailPanel({ table, onClose }) {
   const { freeTable, markBilling } = useRestaurant();
+  const navigate = useNavigate();
 
   const getAvatarInitials = (name) => {
     if (!name) return '??';
@@ -34,17 +37,13 @@ function TableDetailPanel({ table, onClose }) {
     people: numGuests > 0 ? `${numGuests} ${numGuests === 1 ? 'Guest' : 'Guests'}` : 'Empty',
     timeSeated: table?.time && table.time !== '--' ? table.time : 'Just seated',
     server: table?.server || 'Not Assigned',
-    orders: activeGuest ? [
-      { name: 'Wagyu Beef Burger', qty: Math.max(1, Math.floor(numGuests / 2)), price: 28.00, note: 'Medium Rare' },
-      { name: 'Truffle Linguine', qty: Math.max(1, Math.ceil(numGuests / 2)), price: 32.00, note: 'Extra Parmesan' },
-      { name: 'House Lemonade', qty: numGuests || 1, price: 6.00, note: 'Chilled' },
-    ] : [],
-    subtotal: activeGuest ? (
-      Math.max(1, Math.floor(numGuests / 2)) * 28.00 +
-      Math.max(1, Math.ceil(numGuests / 2)) * 32.00 +
-      (numGuests || 1) * 6.00
-    ) : 0,
+    orders: table?.orders || [],
+    subtotal: (table?.orders || []).reduce((sum, item) => sum + item.qty * item.price, 0),
     managerNote: table?.status === 'reserved' ? 'VIP Client Reservation.' : 'Regular customer session.',
+  };
+
+  const handleCreateOrderClick = () => {
+    navigate(`/menu?tableId=${table.dbId}&sessionId=${table.sessionId || 'session-' + table.id}`);
   };
 
   const handleFreeTable = async () => {
@@ -129,10 +128,16 @@ function TableDetailPanel({ table, onClose }) {
               <span className="order-item__note">{order.note}</span>
             </div>
             <span className="order-item__price">
-              ${order.price.toFixed(2)}
+              ${(order.price * order.qty).toFixed(2)}
             </span>
           </div>
         ))}
+
+        {detail.orders.length === 0 && (
+          <div className="order-item" style={{ justifyContent: 'center', opacity: 0.6 }}>
+            <span>No items ordered yet.</span>
+          </div>
+        )}
 
         <div className="detail-panel__subtotal">
           <span className="detail-panel__subtotal-label">Subtotal</span>
@@ -157,6 +162,17 @@ function TableDetailPanel({ table, onClose }) {
 
       {/* Actions */}
       <div className="detail-panel__actions">
+        {table?.status === 'occupied' && (
+          <button 
+            className="detail-panel__btn detail-panel__btn--primary" 
+            style={{ backgroundColor: 'var(--color-primary)', color: 'white', marginBottom: 'var(--space-2)', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+            onClick={handleCreateOrderClick}
+            id="btn-create-order"
+          >
+            <UtensilsCrossed size={16} />
+            Create Order
+          </button>
+        )}
         <div className="detail-panel__actions-row">
           <button className="detail-panel__btn detail-panel__btn--outline" id="btn-move-table">
             <ArrowRightLeft />

@@ -199,3 +199,30 @@
   width: 16px;
   height: 16px;
 }
+
+/* ---- Notes/Remarks ---- */
+.waitlist-entry__notes {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  padding-top: var(--space-1);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.waitlist-entry__notes svg {
+  width: 13px;
+  height: 13px;
+  color: var(--color-primary-light);
+  flex-shrink: 0;
+}
+
+.waitlist-entry__notes-label {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-primary);
+}
+
+.waitlist-entry__notes-content {
+  font-style: italic;
+}
+

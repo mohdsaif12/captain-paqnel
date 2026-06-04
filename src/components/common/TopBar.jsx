@@ -1,9 +1,9 @@
-import { Search, RefreshCw, Settings, Bell } from 'lucide-react';
-import { useRestaurant } from '../../context/RestaurantContext';
+import { Search, RefreshCw, Settings, Bell, Smartphone } from 'lucide-react';
+import { useRestaurant } from '../../context/useRestaurant';
 import './TopBar.css';
 
 function TopBar() {
-  const { createWaiterCall, refresh } = useRestaurant();
+  const { createWaiterCall, refresh, setShowCustomerSim } = useRestaurant();
 
   const handleSimulateCall = async () => {
     const randomTables = ['01', '02', '03', '05', '12', 'VIP-1'];
@@ -36,6 +36,16 @@ function TopBar() {
       <div className="topbar__actions">
         <button 
           className="topbar__btn" 
+          style={{ borderColor: '#10b981', color: '#10b981' }}
+          onClick={() => setShowCustomerSim(true)}
+          title="Open Customer Simulator"
+          id="btn-customer-sim"
+        >
+          <Smartphone size={16} />
+          <span>Customer Sim</span>
+        </button>
+        <button 
+          className="topbar__btn" 
           style={{ borderColor: '#f59e0b', color: '#f59e0b' }}
           onClick={handleSimulateCall}
           title="Simulate Customer Calling Waiter"
@@ -47,7 +57,7 @@ function TopBar() {
           <RefreshCw />
           <span>Sync</span>
         </button>
-        <button className="topbar__btn topbar__btn--end-shift" id="btn-end-shift">
+        <button className="topbar__btn" id="btn-end-shift">
           End Shift
         </button>
         <div className="topbar__avatar" id="topbar-avatar" title="Settings">

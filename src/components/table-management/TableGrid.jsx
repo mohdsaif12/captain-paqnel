@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { Users, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useRestaurant } from '../../context/RestaurantContext';
+import { useNavigate } from 'react-router-dom';
+import { Users, ChevronLeft, ChevronRight, UtensilsCrossed } from 'lucide-react';
+import { useRestaurant } from '../../context/useRestaurant';
 import './TableGrid.css';
 
 function TableGrid({ onSelectTable, selectedTableId }) {
   const { tables = [], stats = { occupied: 0, totalTables: 0 }, loading, error } = useRestaurant();
   const [page, setPage] = useState(1);
+  const navigate = useNavigate();
   const totalPages = 1;
 
   if (loading && tables.length === 0) return <div>Loading Tables...</div>;
@@ -60,6 +62,22 @@ function TableGrid({ onSelectTable, selectedTableId }) {
                 >
                   AVAILABLE
                 </span>
+              </div>
+            )}
+
+            {table.status === 'occupied' && (
+              <div className="tm-card__actions">
+                <button
+                  className="tm-card__action-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/menu?tableId=${table.dbId}&sessionId=${table.sessionId || 'session-' + table.id}`);
+                  }}
+                  id={`btn-table-order-${table.id}`}
+                >
+                  <UtensilsCrossed size={12} />
+                  Create Order
+                </button>
               </div>
             )}
 

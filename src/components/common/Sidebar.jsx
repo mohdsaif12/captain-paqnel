@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, ClipboardList, Users, Bell } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, Users, Bell, Utensils } from 'lucide-react';
 import { captainInfo } from '../../data/mockData';
 import './Sidebar.css';
 
@@ -7,6 +7,7 @@ const navItems = [
   { path: '/', label: 'Table Dashboard', icon: LayoutDashboard },
   { path: '/waiting-list', label: 'Waiting List', icon: ClipboardList },
   { path: '/table-management', label: 'Active Customers', icon: Users },
+  { path: '/menu', label: 'Menu Selection', icon: Utensils },
   { path: '#notifications', label: 'Notifications', icon: Bell },
 ];
 
