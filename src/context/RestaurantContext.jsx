@@ -293,6 +293,7 @@ export function RestaurantProvider({ children }) {
         seated: activeSession ? activeSession.guest_count : 0,
         section: t.restaurant_sections?.section_name || 'General',
         server: null,
+        sessionId: activeSession ? activeSession.id : null,
       };
     });
   };
