@@ -203,7 +203,6 @@ export function RestaurantProvider({ children }) {
             guest_count,
             session_status,
             started_at,
-            server_name,
             orders (
               id,
               order_status,
@@ -427,9 +426,11 @@ export function RestaurantProvider({ children }) {
         session_status: 'active'
       };
       
-      if (waiter) {
-        insertData.server_name = waiter;
-      }
+      // Waiter assignment requires a 'server_name' column in Supabase customer_sessions table
+      // If you add that column in the Supabase dashboard, you can uncomment the following lines:
+      // if (waiter) {
+      //   insertData.server_name = waiter;
+      // }
 
       const { data: session, error: sessionError } = await supabase
         .from('customer_sessions')
