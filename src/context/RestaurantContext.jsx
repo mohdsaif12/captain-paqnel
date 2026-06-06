@@ -203,6 +203,7 @@ export function RestaurantProvider({ children }) {
             guest_count,
             session_status,
             started_at,
+            server_name,
             orders (
               id,
               order_status,
@@ -319,7 +320,7 @@ export function RestaurantProvider({ children }) {
         capacity: t.capacity,
         seated: activeSession ? activeSession.guest_count : 0,
         section: t.restaurant_sections?.section_name || 'General',
-        server: null,
+        server: activeSession?.server_name || null,
         sessionId: activeSession ? activeSession.id : null,
         orders: mappedOrders,
       };
@@ -416,17 +417,23 @@ export function RestaurantProvider({ children }) {
     }
 
     try {
-      const { customerName, phoneNumber, numberOfPeople, arrivalStatus, waitlistId } = customerData;
+      const { customerName, phoneNumber, numberOfPeople, arrivalStatus, waitlistId, waiter } = customerData;
       
+      const insertData = {
+        table_id: tableDbId,
+        customer_name: customerName,
+        phone_number: phoneNumber,
+        guest_count: parseInt(numberOfPeople),
+        session_status: 'active'
+      };
+      
+      if (waiter) {
+        insertData.server_name = waiter;
+      }
+
       const { data: session, error: sessionError } = await supabase
         .from('customer_sessions')
-        .insert([{
-          table_id: tableDbId,
-          customer_name: customerName,
-          phone_number: phoneNumber,
-          guest_count: parseInt(numberOfPeople),
-          session_status: 'active'
-        }])
+        .insert([insertData])
         .select()
         .single();
 
@@ -443,7 +450,7 @@ export function RestaurantProvider({ children }) {
         await supabase
           .from('waiting_list')
           .update({ 
-            queue_status: 'assigned',
+            queue_status: 'seated',
             assigned_table_id: tableDbId,
             assigned_at: new Date().toISOString()
           })

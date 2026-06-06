@@ -13,7 +13,10 @@ function AssignTableModal({ table, onClose, onAssign, initialData }) {
     specialNote: initialData?.specialNote || '',
     tableId: table?.dbId || '',
     preference: initialData?.preference || 'No Preference',
+    waiter: '',
   });
+
+  const MOCK_WAITERS = ['Alex', 'Sam', 'Jordan', 'Casey'];
 
   const isAddMode = !table && !initialData;
   const isAssignFromWaitlist = !table && !!initialData;
@@ -184,6 +187,27 @@ function AssignTableModal({ table, onClose, onAssign, initialData }) {
               </div>
             )}
           </div>
+
+          {/* Waiter Selection (if seating) */}
+          {!isAddMode && arrivalStatus === 'seated' && (
+            <div className="modal__field modal__field--full">
+              <label className="modal__label">Assign Waiter</label>
+              <div className="modal__input">
+                <select
+                  value={formData.waiter}
+                  onChange={(e) => handleChange('waiter', e.target.value)}
+                  id="select-waiter"
+                >
+                  <option value="">-- No Waiter Assigned --</option>
+                  {MOCK_WAITERS.map((waiter) => (
+                    <option key={waiter} value={waiter}>
+                      {waiter}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
 
           {/* Special Note */}
           <div className="modal__field modal__field--full">
