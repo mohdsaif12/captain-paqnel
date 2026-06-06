@@ -501,8 +501,7 @@ export function RestaurantProvider({ children }) {
           phone_number: customerData.phoneNumber,
           guest_count: parseInt(customerData.numberOfPeople),
           preferred_section: customerData.preference,
-          queue_status: 'waiting',
-          special_notes: customerData.specialNote
+          queue_status: 'waiting'
         }]);
 
       if (error) throw error;
