@@ -202,7 +202,18 @@ export function RestaurantProvider({ children }) {
             customer_name,
             guest_count,
             session_status,
-            started_at
+            started_at,
+            orders (
+              id,
+              order_status,
+              order_items (
+                quantity,
+                item_price,
+                menu_items (
+                  item_name
+                )
+              )
+            )
           )
         `)
         .order('table_number');
@@ -283,6 +294,22 @@ export function RestaurantProvider({ children }) {
     return supabaseTables.map(t => {
       const activeSession = t.customer_sessions?.find(s => s.session_status === 'active');
       
+      const mappedOrders = [];
+      if (activeSession && activeSession.orders) {
+        activeSession.orders.forEach(order => {
+          if (order.order_items) {
+            order.order_items.forEach(item => {
+              mappedOrders.push({
+                name: item.menu_items?.item_name || 'Unknown Item',
+                qty: item.quantity,
+                price: item.item_price,
+                note: ''
+              });
+            });
+          }
+        });
+      }
+
       return {
         id: `T-${t.table_number.toString().padStart(2, '0')}`,
         dbId: t.id,
@@ -294,6 +321,7 @@ export function RestaurantProvider({ children }) {
         section: t.restaurant_sections?.section_name || 'General',
         server: null,
         sessionId: activeSession ? activeSession.id : null,
+        orders: mappedOrders,
       };
     });
   };
