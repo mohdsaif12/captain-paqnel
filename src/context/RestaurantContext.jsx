@@ -327,12 +327,18 @@ export function RestaurantProvider({ children }) {
   };
 
   const mapWaiterCalls = (calls) => {
-    return calls.map(call => ({
-      ...call,
-      table_number: call.restaurant_tables?.table_number || 'General',
-      request_type: call.notes || 'Call Waiter',
-      is_sos: call.is_sos || (call.notes && call.notes.startsWith('SOS:')) || false
-    }));
+    return calls.map(call => {
+      const isSos = call.is_sos || 
+                    (call.notes && call.notes.includes('SOS:')) || 
+                    (call.customer_name && call.customer_name.includes('SOS:')) || 
+                    false;
+      return {
+        ...call,
+        table_number: call.restaurant_tables?.table_number || 'General',
+        request_type: call.notes || 'Call Waiter',
+        is_sos: isSos
+      };
+    });
   };
 
   const formatWaitTime = (startedAt) => {

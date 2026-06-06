@@ -117,7 +117,10 @@ function TableDetailPanel({ table, onClose }) {
                   onChange={async (e) => {
                     const newServer = e.target.value;
                     if (newServer && table.sessionId) {
-                      await assignWaiter(table.sessionId, newServer);
+                      const result = await assignWaiter(table.sessionId, newServer);
+                      if (!result.success) {
+                        alert("Failed to assign waiter. Please make sure you have added the 'server_name' column to the 'customer_sessions' table in Supabase.");
+                      }
                     }
                     setIsEditingServer(false);
                   }}
