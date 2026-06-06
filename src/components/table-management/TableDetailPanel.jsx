@@ -11,8 +11,10 @@ import { useRestaurant } from '../../context/useRestaurant';
 import './TableDetailPanel.css';
 
 function TableDetailPanel({ table, onClose }) {
-  const { freeTable, markBilling } = useRestaurant();
+  const [isEditingServer, setIsEditingServer] = useState(false);
+  const { freeTable, markBilling, assignWaiter } = useRestaurant();
   const navigate = useNavigate();
+  const MOCK_WAITERS = ['Alex', 'Sam', 'Jordan', 'Casey'];
 
   const getAvatarInitials = (name) => {
     if (!name) return '??';
@@ -104,9 +106,47 @@ function TableDetailPanel({ table, onClose }) {
           <span className="detail-panel__info-label">Time Seated</span>
           <span className="detail-panel__info-value">{detail.timeSeated}</span>
         </div>
-        <div className="detail-panel__info-item">
+        <div className="detail-panel__info-item" style={{ alignItems: 'flex-start' }}>
           <span className="detail-panel__info-label">Server</span>
-          <span className="detail-panel__info-value">{detail.server}</span>
+          <span className="detail-panel__info-value">
+            {isEditingServer ? (
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <select
+                  value={detail.server || ''}
+                  onChange={async (e) => {
+                    const newServer = e.target.value;
+                    if (newServer && table.sessionId) {
+                      await assignWaiter(table.sessionId, newServer);
+                    }
+                    setIsEditingServer(false);
+                  }}
+                  autoFocus
+                  onBlur={() => setIsEditingServer(false)}
+                  style={{
+                    padding: '4px',
+                    borderRadius: '4px',
+                    border: '1px solid #ddd',
+                    background: 'var(--bg-main)',
+                    color: 'var(--text-main)',
+                    outline: 'none'
+                  }}
+                >
+                  <option value="" disabled>Select Waiter</option>
+                  {MOCK_WAITERS.map(w => (
+                    <option key={w} value={w}>{w}</option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <span 
+                style={{ cursor: 'pointer', textDecoration: 'underline', textDecorationStyle: 'dotted', color: 'var(--brand-primary)' }}
+                onClick={() => setIsEditingServer(true)}
+                title="Click to assign waiter"
+              >
+                {detail.server || 'Not Assigned'}
+              </span>
+            )}
+          </span>
         </div>
       </div>
 

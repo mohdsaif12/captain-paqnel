@@ -462,6 +462,22 @@ export function RestaurantProvider({ children }) {
     }
   };
 
+  const assignWaiter = async (sessionId, serverName) => {
+    try {
+      const { error } = await supabase
+        .from('customer_sessions')
+        .update({ server_name: serverName })
+        .eq('id', sessionId);
+        
+      if (error) throw error;
+      await fetchData();
+      return { success: true };
+    } catch (err) {
+      console.error('Error assigning waiter:', err);
+      return { success: false, error: err.message };
+    }
+  };
+
   const addToWaitlist = async (customerData) => {
     if (isMockMode) {
       try {
@@ -797,6 +813,7 @@ export function RestaurantProvider({ children }) {
       setShowCustomerSim,
       refresh: fetchData,
       assignTable,
+      assignWaiter,
       addToWaitlist,
       createWaiterCall,
       freeTable,

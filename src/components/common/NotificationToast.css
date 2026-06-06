@@ -183,10 +183,22 @@
   border-left: 4px solid #ef4444;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 0 15px rgba(239, 68, 68, 0.2);
   animation: slideInToast 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards, pulseSosBorder 2s infinite ease-in-out;
+  animation: slideInToast 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards, pulseSosBorder 2s infinite ease-in-out, sos-blink 1s ease-in-out infinite;
 }
 
 .notification-toast--sos::before {
   background: linear-gradient(90deg, rgba(239, 68, 68, 0.08) 0%, rgba(255, 255, 255, 0) 100%);
+}
+
+@keyframes sos-blink {
+  0%, 100% {
+    border-color: rgba(239, 68, 68, 0.8);
+    box-shadow: 0 0 12px rgba(239, 68, 68, 0.4);
+  }
+  50% {
+    border-color: rgba(239, 68, 68, 0.2);
+    box-shadow: none;
+  }
 }
 
 .notification-toast__icon--sos {
