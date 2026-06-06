@@ -450,11 +450,7 @@ export function RestaurantProvider({ children }) {
       if (waitlistId) {
         await supabase
           .from('waiting_list')
-          .update({ 
-            queue_status: 'seated',
-            assigned_table_id: tableDbId,
-            assigned_at: new Date().toISOString()
-          })
+          .delete()
           .eq('id', waitlistId);
       }
 
