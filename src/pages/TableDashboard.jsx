@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Grid3X3, CheckCircle2, AlertCircle, Clock, UserPlus } from 'lucide-react';
+import { Grid3X3, CheckCircle2, AlertCircle, Clock, UserPlus, AlertTriangle } from 'lucide-react';
 import StatCard from '../components/common/StatCard';
 import FilterTabs from '../components/dashboard/FilterTabs';
 import { TableCard, NewTableCard } from '../components/dashboard/TableCard';
@@ -84,6 +84,25 @@ function TableDashboard() {
         <StatCard label="Occupied" value={stats.occupied} icon={AlertCircle} variant="occupied" />
         <StatCard label="Waiting" value={stats.waiting} icon={Clock} variant="waiting" />
       </div>
+
+      {/* All tables full banner */}
+      {stats.totalTables > 0 && stats.available === 0 && (
+        <div className="table-dashboard__full-banner" id="all-tables-full-banner">
+          <AlertTriangle size={16} />
+          <span>All tables are full — new walk-ins should go to the Waiting List.</span>
+          <button
+            onClick={() => {
+              setSelectedTable(null);
+              setAssigningEntry(null);
+              setShowModal(true);
+              setShowDetail(false);
+            }}
+            id="btn-full-banner-waitlist"
+          >
+            Add to Waiting List
+          </button>
+        </div>
+      )}
 
       {/* Toolbar */}
       <div className="table-dashboard__toolbar">

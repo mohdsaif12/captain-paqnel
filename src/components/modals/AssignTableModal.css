@@ -254,3 +254,9 @@
 .modal__btn-submit:hover {
   background: var(--color-primary-hover);
 }
+
+.modal__btn-submit:disabled,
+.modal__btn-cancel:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, ClipboardList, Users, Bell, Utensils } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, Users, Bell, Utensils, BarChart3 } from 'lucide-react';
 import { captainInfo } from '../../data/mockData';
 import './Sidebar.css';
 
@@ -8,7 +8,8 @@ const navItems = [
   { path: '/waiting-list', label: 'Waiting List', icon: ClipboardList },
   { path: '/table-management', label: 'Active Customers', icon: Users },
   { path: '/menu', label: 'Menu Selection', icon: Utensils },
-  { path: '#notifications', label: 'Notifications', icon: Bell },
+  { path: '/reports', label: 'Shift Reports', icon: BarChart3 },
+  { path: '/notifications', label: 'Notifications', icon: Bell },
 ];
 
 function Sidebar() {
@@ -32,17 +33,14 @@ function Sidebar() {
           const isActive =
             item.path === '/'
               ? location.pathname === '/'
-              : location.pathname.startsWith(item.path) && item.path !== '#notifications';
+              : location.pathname.startsWith(item.path);
 
           return (
             <NavLink
               key={item.path}
-              to={item.path === '#notifications' ? '#' : item.path}
+              to={item.path}
               className={`sidebar__nav-item ${isActive ? 'sidebar__nav-item--active' : ''}`}
               id={`nav-${item.label.toLowerCase().replace(/\s/g, '-')}`}
-              onClick={(e) => {
-                if (item.path === '#notifications') e.preventDefault();
-              }}
             >
               <Icon />
               {item.label}

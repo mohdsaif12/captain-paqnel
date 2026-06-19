@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, ChevronLeft, ChevronRight, UtensilsCrossed } from 'lucide-react';
+import { Users, ChevronLeft, ChevronRight, UtensilsCrossed, Combine } from 'lucide-react';
 import { useRestaurant } from '../../context/useRestaurant';
 import './TableGrid.css';
 
@@ -40,6 +40,17 @@ function TableGrid({ onSelectTable, selectedTableId }) {
                 {table.seated}/{table.capacity}
               </div>
             </div>
+
+            {table.mergedInto && (
+              <span className="tm-card__merge-pill">
+                <Combine size={11} /> Merged → {tables.find((t) => t.dbId === table.mergedInto)?.id || '—'}
+              </span>
+            )}
+            {table.mergedTableIds?.length > 0 && (
+              <span className="tm-card__merge-pill">
+                <Combine size={11} /> Combined +{table.mergedTableIds.length}
+              </span>
+            )}
 
             {table.guest && (
               <>

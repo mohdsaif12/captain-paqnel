@@ -118,6 +118,19 @@
   color: var(--color-text-inverse);
 }
 
+.topbar__btn--start-shift {
+  background: #10b981;
+  color: var(--color-text-inverse);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-full);
+  font-weight: var(--font-weight-semibold);
+}
+
+.topbar__btn--start-shift:hover {
+  background: #059669;
+  color: var(--color-text-inverse);
+}
+
 .topbar__avatar {
   width: 32px;
   height: 32px;

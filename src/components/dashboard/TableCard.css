@@ -259,6 +259,27 @@
   height: 12px;
 }
 
+.table-card__merge-badge {
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  background: var(--color-primary);
+  color: white;
+  font-size: 10px;
+  font-weight: var(--font-weight-bold);
+  box-shadow: var(--shadow-sm);
+}
+
+.table-card__merge-badge svg {
+  width: 11px;
+  height: 11px;
+}
+
 /* ---- Create Order Table Action Button ---- */
 .table-card__order-btn {
   display: flex;

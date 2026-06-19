@@ -17,6 +17,38 @@
   }
 }
 
+/* ---- Full banner ---- */
+.table-dashboard__full-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-5);
+  background: rgba(217, 119, 6, 0.1);
+  border: 1px solid rgba(217, 119, 6, 0.3);
+  border-radius: var(--radius-md);
+  color: #b45309;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.table-dashboard__full-banner svg {
+  flex-shrink: 0;
+}
+
+.table-dashboard__full-banner span {
+  flex: 1;
+}
+
+.table-dashboard__full-banner button {
+  flex-shrink: 0;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  background: #b45309;
+  color: white;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+}
+
 /* ---- Toolbar ---- */
 .table-dashboard__toolbar {
   display: flex;

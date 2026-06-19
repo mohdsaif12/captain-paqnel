@@ -6,6 +6,7 @@ import './AssignTableModal.css';
 function AssignTableModal({ table, onClose, onAssign, initialData }) {
   const { tables = [], sections = [] } = useRestaurant();
   const [arrivalStatus, setArrivalStatus] = useState('seated');
+  const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     customerName: initialData?.customerName || '',
     phoneNumber: initialData?.phoneNumber || '',
@@ -25,13 +26,19 @@ function AssignTableModal({ table, onClose, onAssign, initialData }) {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    if (submitting) return;
     if (isAssignFromWaitlist && !formData.tableId) {
       alert('Please select a table to assign.');
       return;
     }
     if (onAssign) {
-      onAssign({ ...formData, arrivalStatus });
+      setSubmitting(true);
+      try {
+        await onAssign({ ...formData, arrivalStatus });
+      } finally {
+        setSubmitting(false);
+      }
     }
   };
 
@@ -224,11 +231,11 @@ function AssignTableModal({ table, onClose, onAssign, initialData }) {
 
         {/* Footer */}
         <div className="modal__footer">
-          <button className="modal__btn-cancel" onClick={onClose} id="btn-modal-cancel">
+          <button className="modal__btn-cancel" onClick={onClose} disabled={submitting} id="btn-modal-cancel">
             Cancel
           </button>
-          <button className="modal__btn-submit" onClick={handleSubmit} id="btn-modal-assign">
-            {isAddMode ? 'Add to Waitlist' : 'Assign Table'}
+          <button className="modal__btn-submit" onClick={handleSubmit} disabled={submitting} id="btn-modal-assign">
+            {submitting ? 'Saving...' : isAddMode ? 'Add to Waitlist' : 'Assign Table'}
           </button>
         </div>
       </div>

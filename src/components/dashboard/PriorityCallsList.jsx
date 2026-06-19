@@ -7,8 +7,12 @@ function PriorityCallsList() {
   const navigate = useNavigate();
   const { waiterCalls = [], completeWaiterCall, tables = [] } = useRestaurant();
 
-  // Sort calls by created_at ascending (oldest first, i.e. highest wait time = highest priority)
-  const sortedCalls = [...waiterCalls].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+  // Sort calls by: 1. SOS calls first, 2. Created_at ascending (oldest first)
+  const sortedCalls = [...waiterCalls].sort((a, b) => {
+    if (a.is_sos && !b.is_sos) return -1;
+    if (!a.is_sos && b.is_sos) return 1;
+    return new Date(a.created_at) - new Date(b.created_at);
+  });
 
   const formatElapsedTime = (timestamp) => {
     if (!timestamp) return 'Just now';

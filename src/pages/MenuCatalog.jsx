@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase, isMockMode } from '../lib/supabase';
 import { useRestaurant } from '../context/useRestaurant';
@@ -86,6 +86,12 @@ const MenuCatalog = () => {
   const [menuItems, setMenuItems] = useState([]);
   const [orderItems, setOrderItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  // React state updates are batched/async, so two clicks dispatched in the
+  // same tick (e.g. a real fast double-tap) can both read a stale
+  // isSubmitting=false before either re-render lands. A ref mutates
+  // synchronously, so the second call always sees the first call's guard.
+  const submittingRef = useRef(false);
 
   // Find table info
   const selectedTable = tables.find(t => t.dbId === tableId || t.id === tableId);
@@ -152,6 +158,10 @@ const MenuCatalog = () => {
     }).filter(Boolean));
   };
 
+  const updateNote = (id, notes) => {
+    setOrderItems(orderItems.map(i => (i.id === id ? { ...i, notes } : i)));
+  };
+
   const clearOrder = () => {
     if (window.confirm('Clear entire order?')) {
       setOrderItems([]);
@@ -159,14 +169,17 @@ const MenuCatalog = () => {
   };
 
   const handlePlaceOrder = async () => {
-    if (orderItems.length === 0) return;
+    if (orderItems.length === 0 || submittingRef.current) return;
+    submittingRef.current = true;
 
     const targetTableId = tableId || (tables.length > 0 ? tables[0].dbId : null);
     if (!targetTableId) {
       alert("No table selected. Please choose a table from the Dashboard first.");
+      submittingRef.current = false;
       return;
     }
-    
+
+    setIsSubmitting(true);
     try {
       setLoading(true);
       const result = await createOrder(targetTableId, orderItems);
@@ -177,15 +190,19 @@ const MenuCatalog = () => {
           .filter((n) => n && n.trim().length > 0)
           .join('; ');
         // Auto-print KOT immediately after a successful order
-        printKOT({
+        const printed = printKOT({
           tableId: selectedTable?.id || tableId,
           sessionId: sessionId || (selectedTable?.sessionId),
+          kotNumber: result.kot?.kotNumber,
           items: orderItems,
           guestName: selectedTable?.guest,
           section: selectedTable?.section,
           orderNote: combinedNote,
         });
         setOrderItems([]);
+        if (!printed) {
+          alert('Order placed, but the KOT print window was blocked by your browser. Please allow pop-ups for this site and use Reprint KOT from the table detail panel to send it to the kitchen.');
+        }
         navigate('/');
       } else {
         alert('Error creating order: ' + result.error);
@@ -194,6 +211,8 @@ const MenuCatalog = () => {
       alert('Error creating order: ' + error.message);
     } finally {
       setLoading(false);
+      setIsSubmitting(false);
+      submittingRef.current = false;
     }
   };
 
@@ -307,10 +326,17 @@ const MenuCatalog = () => {
                 <div className="item-main">
                   <div className="item-details">
                     <h4>{item.name}</h4>
-                    <p>{item.notes || 'No notes'}</p>
                   </div>
                   <div className="item-price">${(item.price * item.qty).toFixed(2)}</div>
                 </div>
+                <input
+                  type="text"
+                  className="item-note-input"
+                  placeholder="Special instruction (e.g. no onions)..."
+                  value={item.notes}
+                  onChange={(e) => updateNote(item.id, e.target.value)}
+                  id={`input-note-${item.id}`}
+                />
                 <div className="item-controls">
                   <div className="qty-picker">
                     <button onClick={() => updateQty(item.id, -1)} id={`btn-dec-qty-${item.id}`}>-</button>
@@ -341,14 +367,14 @@ const MenuCatalog = () => {
               <span>Total</span>
               <span>${total.toFixed(2)}</span>
             </div>
-            <button 
-              className="create-order-btn" 
+            <button
+              className="create-order-btn"
               onClick={handlePlaceOrder}
-              disabled={orderItems.length === 0}
+              disabled={orderItems.length === 0 || isSubmitting}
               id="btn-place-order"
-              style={{ opacity: orderItems.length === 0 ? 0.5 : 1, cursor: orderItems.length === 0 ? 'not-allowed' : 'pointer' }}
+              style={{ opacity: (orderItems.length === 0 || isSubmitting) ? 0.5 : 1, cursor: (orderItems.length === 0 || isSubmitting) ? 'not-allowed' : 'pointer' }}
             >
-              Place Order <ChevronRight size={18} />
+              {isSubmitting ? 'Placing Order...' : 'Place Order'} <ChevronRight size={18} />
             </button>
           </div>
         </div>

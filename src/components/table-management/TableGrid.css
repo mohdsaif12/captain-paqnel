@@ -63,6 +63,20 @@
   margin-bottom: var(--space-3);
 }
 
+.tm-card__merge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  align-self: flex-start;
+  margin-bottom: var(--space-2);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: var(--color-primary-subtle);
+  color: var(--color-primary);
+  font-size: 10px;
+  font-weight: var(--font-weight-bold);
+}
+
 .tm-card__id {
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-bold);

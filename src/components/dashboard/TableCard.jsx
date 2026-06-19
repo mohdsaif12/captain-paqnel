@@ -8,7 +8,9 @@ import {
   PlusCircle,
   MessageCircle,
   Bell,
+  Combine,
 } from 'lucide-react';
+import { useRestaurant } from '../../context/useRestaurant';
 import './TableCard.css';
 
 const statusConfig = {
@@ -46,6 +48,7 @@ function getCapacityVariant(seated, capacity) {
 }
 
 function TableCard({ table, onClick, onClickOrder }) {
+  const { tables = [] } = useRestaurant();
   const config = statusConfig[table?.status] || statusConfig.available;
   const StatusIcon = config.icon;
   const seated = table?.seated || 0;
@@ -53,6 +56,8 @@ function TableCard({ table, onClick, onClickOrder }) {
   const capacityVariant = getCapacityVariant(seated, capacity);
 
   const subtotal = (table?.orders || []).reduce((sum, item) => sum + item.qty * item.price, 0);
+  const mergedIntoTable = table?.mergedInto ? tables.find((t) => t.dbId === table.mergedInto) : null;
+  const combinedCount = table?.mergedTableIds?.length || 0;
 
   const getSecondaryValue = () => {
     if (table.status === 'reserved') return table.guest;
@@ -78,6 +83,13 @@ function TableCard({ table, onClick, onClickOrder }) {
       {table.hasPendingCall && (
         <div className="table-card__bell-badge" title="Active Waiter Call!">
           <Bell size={12} className="animate-pulse" />
+        </div>
+      )}
+
+      {(mergedIntoTable || combinedCount > 0) && (
+        <div className="table-card__merge-badge" title={mergedIntoTable ? `Merged into ${mergedIntoTable.id}` : 'Combined with another table'}>
+          <Combine size={11} />
+          {mergedIntoTable ? `→ ${mergedIntoTable.id}` : `+${combinedCount}`}
         </div>
       )}
 

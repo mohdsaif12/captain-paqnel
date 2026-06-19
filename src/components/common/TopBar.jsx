@@ -1,9 +1,20 @@
+import { useState } from 'react';
 import { Search, RefreshCw, Settings, Bell, Smartphone } from 'lucide-react';
 import { useRestaurant } from '../../context/useRestaurant';
+import EndShiftModal from '../modals/EndShiftModal';
 import './TopBar.css';
 
 function TopBar() {
-  const { createWaiterCall, refresh, setShowCustomerSim } = useRestaurant();
+  const { 
+    createWaiterCall, 
+    refresh, 
+    setShowCustomerSim, 
+    generateShiftReport, 
+    isShiftActive, 
+    startShift 
+  } = useRestaurant();
+  const [showEndShiftModal, setShowEndShiftModal] = useState(false);
+  const [reportData, setReportData] = useState(null);
 
   const handleSimulateCall = async () => {
     const randomTables = ['01', '02', '03', '05', '12', 'VIP-1'];
@@ -18,6 +29,17 @@ function TopBar() {
     });
   };
 
+  const handleEndShiftClick = async () => {
+    try {
+      const data = await generateShiftReport();
+      setReportData(data);
+      setShowEndShiftModal(true);
+    } catch (err) {
+      console.error('Error generating shift report:', err);
+      alert('Failed to generate shift report: ' + err.message);
+    }
+  };
+
   return (
     <header className="topbar" id="topbar">
       {/* Search */}
@@ -28,8 +50,8 @@ function TopBar() {
 
       {/* Status */}
       <div className="topbar__status">
-        <div className="topbar__status-dot" />
-        <span>Status: Online</span>
+        <div className="topbar__status-dot" style={{ backgroundColor: isShiftActive ? '#10b981' : '#ef4444', boxShadow: isShiftActive ? '0 0 0 3px rgba(16, 185, 129, 0.15)' : '0 0 0 3px rgba(239, 68, 68, 0.15)' }} />
+        <span>Status: {isShiftActive ? 'Shift Active' : 'Shift Ended'}</span>
       </div>
 
       {/* Actions */}
@@ -40,6 +62,7 @@ function TopBar() {
           onClick={() => setShowCustomerSim(true)}
           title="Open Customer Simulator"
           id="btn-customer-sim"
+          disabled={!isShiftActive}
         >
           <Smartphone size={16} />
           <span>Customer Sim</span>
@@ -49,21 +72,46 @@ function TopBar() {
           style={{ borderColor: '#f59e0b', color: '#f59e0b' }}
           onClick={handleSimulateCall}
           title="Simulate Customer Calling Waiter"
+          disabled={!isShiftActive}
         >
-          <Bell size={16} className="animate-bounce" />
+          <Bell size={16} className={isShiftActive ? 'animate-bounce' : ''} />
           <span>Test Call</span>
         </button>
-        <button className="topbar__btn" id="btn-sync" onClick={refresh} title="Sync">
+        <button className="topbar__btn" id="btn-sync" onClick={refresh} title="Sync" disabled={!isShiftActive}>
           <RefreshCw />
           <span>Sync</span>
         </button>
-        <button className="topbar__btn" id="btn-end-shift">
-          End Shift
-        </button>
+        
+        {isShiftActive ? (
+          <button 
+            className="topbar__btn topbar__btn--end-shift" 
+            id="btn-end-shift"
+            onClick={handleEndShiftClick}
+            title="End Shift and Generate Report"
+          >
+            End Shift
+          </button>
+        ) : (
+          <button 
+            className="topbar__btn topbar__btn--start-shift" 
+            id="btn-start-shift"
+            onClick={startShift}
+            title="Start New Shift"
+          >
+            Start Shift
+          </button>
+        )}
         <div className="topbar__avatar" id="topbar-avatar" title="Settings">
           <Settings size={16} />
         </div>
       </div>
+
+      {showEndShiftModal && reportData && (
+        <EndShiftModal 
+          reportData={reportData} 
+          onClose={() => setShowEndShiftModal(false)} 
+        />
+      )}
     </header>
   );
 }

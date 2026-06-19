@@ -12,6 +12,7 @@
  * @param {string}  [params.section]   - Restaurant section (optional)
  * @param {number}  [params.kotNumber] - Sequential KOT number (optional)
  * @param {string}  [params.orderNote] - Order-level notes (optional)
+ * @returns {boolean} true if the print window opened, false if the popup was blocked
  */
 export function printKOT(params) {
   const { tableId, sessionId, items = [], guestName, section, kotNumber, orderNote = '' } = params;
@@ -206,7 +207,7 @@ export function printKOT(params) {
   const win = window.open('', '_blank', 'width=380,height=600,scrollbars=no,menubar=no,toolbar=no');
   if (!win) {
     console.warn('printKOT: Pop-up blocked. Please allow pop-ups for this site.');
-    return;
+    return false;
   }
   win.document.write(html);
   win.document.close();
@@ -219,4 +220,125 @@ export function printKOT(params) {
       win.close();
     }, 400);
   };
+  return true;
+}
+
+/**
+ * printCancellationKOT — kitchen-facing cancellation/void ticket
+ *
+ * Printed whenever an item is cancelled after its KOT has already gone to
+ * the kitchen, so kitchen staff has a paper trail of what to stop/discard.
+ *
+ * @param {Object} params
+ * @param {string} params.tableId
+ * @param {string} [params.guestName]
+ * @param {number} [params.kotNumber] - which KOT the item originally belonged to
+ * @param {{name:string, qty:number, notes?:string}} params.item
+ * @param {string} params.reason
+ * @returns {boolean} true if the print window opened, false if the popup was blocked
+ */
+export function printCancellationKOT(params) {
+  const { tableId, guestName, kotNumber, item, reason } = params;
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>CANCELLATION – ${tableId}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Courier Prime', 'Courier New', monospace;
+      font-size: 13px;
+      background: #fff;
+      color: #111;
+      width: 80mm;
+      padding: 4mm 4mm 8mm;
+    }
+    .void-banner {
+      text-align: center;
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      border: 3px double #b91c1c;
+      color: #b91c1c;
+      padding: 6px 0;
+      margin-bottom: 8px;
+    }
+    .meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3px 8px;
+      margin-bottom: 8px;
+      font-size: 12px;
+    }
+    .meta-grid .label { color: #555; }
+    .meta-grid .value { font-weight: 700; text-align: right; }
+    .divider { border: none; border-top: 1px dashed #111; margin: 6px 0; }
+    .cancelled-item {
+      text-align: center;
+      font-size: 16px;
+      font-weight: 700;
+      margin: 8px 0;
+    }
+    .reason-box {
+      border: 1px solid #b91c1c;
+      padding: 6px 8px;
+      margin-top: 8px;
+      font-size: 12px;
+    }
+    .reason-box .label { font-weight: 700; text-transform: uppercase; font-size: 10px; color: #b91c1c; }
+    .footer { margin-top: 10px; text-align: center; font-size: 10px; color: #777; letter-spacing: 1px; }
+    @media print {
+      body { width: 80mm; }
+      @page { margin: 0; size: 80mm auto; }
+    }
+  </style>
+</head>
+<body>
+  <div class="void-banner">⚠ CANCELLED ⚠</div>
+
+  <div class="meta-grid">
+    <span class="label">Table</span>
+    <span class="value">${tableId}</span>
+    ${guestName ? `<span class="label">Guest</span><span class="value">${guestName}</span>` : ''}
+    ${kotNumber ? `<span class="label">Orig. KOT</span><span class="value">#${kotNumber}</span>` : ''}
+    <span class="label">Date</span>
+    <span class="value">${dateStr}</span>
+    <span class="label">Time</span>
+    <span class="value">${timeStr}</span>
+  </div>
+
+  <hr class="divider" />
+  <div class="cancelled-item">${item.qty}x ${item.name}</div>
+  ${item.notes ? `<div style="text-align:center;font-size:11px;color:#555;font-style:italic;">${item.notes}</div>` : ''}
+  <hr class="divider" />
+
+  <div class="reason-box">
+    <div class="label">Reason</div>
+    <div>${reason}</div>
+  </div>
+
+  <div class="footer">** STOP PREPARATION / DISCARD **</div>
+</body>
+</html>`;
+
+  const win = window.open('', '_blank', 'width=380,height=500,scrollbars=no,menubar=no,toolbar=no');
+  if (!win) {
+    console.warn('printCancellationKOT: Pop-up blocked. Please allow pop-ups for this site.');
+    return false;
+  }
+  win.document.write(html);
+  win.document.close();
+  win.onload = () => {
+    setTimeout(() => {
+      win.focus();
+      win.print();
+      win.close();
+    }, 400);
+  };
+  return true;
 }
