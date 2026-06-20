@@ -14,6 +14,10 @@ ALTER TABLE restaurant_tables ADD COLUMN IF NOT EXISTS bill_discount_value NUMER
 -- this just guarantees the column exists so it can be read back) ---------
 ALTER TABLE customer_sessions ADD COLUMN IF NOT EXISTS phone_number TEXT;
 
+-- Assigned waiter/server name on the session (the dashboard's table query
+-- selects this column explicitly, so it must exist or the whole query fails) --
+ALTER TABLE customer_sessions ADD COLUMN IF NOT EXISTS server_name TEXT;
+
 -- Per-item special instructions --------------------------------------------
 ALTER TABLE order_items ADD COLUMN IF NOT EXISTS notes TEXT;
 

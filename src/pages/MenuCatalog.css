@@ -13,6 +13,17 @@
   gap: var(--space-4);
 }
 
+.menu-view__offline-banner {
+  margin-left: auto;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-full);
+  background: rgba(217, 119, 6, 0.1);
+  border: 1px solid rgba(217, 119, 6, 0.25);
+  color: #b45309;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
 .menu-view__back-btn {
   background: var(--color-bg-card);
   border: 1px solid var(--color-border);

@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase, isMockMode } from '../lib/supabase';
 import { useRestaurant } from '../context/useRestaurant';
 import { printKOT } from '../lib/printKOT';
+import { isNetworkError } from '../lib/networkError';
 import { 
   Utensils, 
   Coffee, 
@@ -50,6 +51,8 @@ const getCategoryIcon = (name) => {
 // Fallback gradient placeholder as data URI
 const FOOD_PLACEHOLDER = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='200'%3E%3Crect width='400' height='200' fill='%23F9EBE0'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-size='48' opacity='0.35'%3E%F0%9F%8D%BD%EF%B8%8F%3C/text%3E%3C/svg%3E`;
 
+const MENU_CACHE_KEY = 'cached_menu_data';
+
 const MOCK_CATEGORIES = [
   { id: 'cat-1', category_name: 'Starters' },
   { id: 'cat-2', category_name: 'Main Course' },
@@ -87,6 +90,7 @@ const MenuCatalog = () => {
   const [orderItems, setOrderItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [usingCachedMenu, setUsingCachedMenu] = useState(false);
   // React state updates are batched/async, so two clicks dispatched in the
   // same tick (e.g. a real fast double-tap) can both read a stale
   // isSubmitting=false before either re-render lands. A ref mutates
@@ -111,23 +115,43 @@ const MenuCatalog = () => {
 
     try {
       setLoading(true);
-      
+
       const { data: catsData, error: catsError } = await supabase
         .from('menu_categories')
         .select('*')
         .order('category_name');
       if (catsError) throw catsError;
-      setCategories(catsData);
-      if (catsData.length > 0) setActiveCategory(catsData[0].id);
 
       const { data: itemsData, error: itemsError } = await supabase
         .from('menu_items')
         .select('*')
         .eq('is_available', true);
       if (itemsError) throw itemsError;
+
+      setCategories(catsData);
       setMenuItems(itemsData);
+      if (catsData.length > 0) setActiveCategory(catsData[0].id);
+      setUsingCachedMenu(false);
+
+      // Cache the last known-good menu so the page still has something to
+      // show if the next visit happens to be offline.
+      localStorage.setItem(MENU_CACHE_KEY, JSON.stringify({ categories: catsData, items: itemsData }));
     } catch (error) {
       console.error('Error fetching menu data:', error);
+      if (isNetworkError(error)) {
+        const cached = localStorage.getItem(MENU_CACHE_KEY);
+        if (cached) {
+          try {
+            const { categories: cachedCats, items: cachedItems } = JSON.parse(cached);
+            setCategories(cachedCats || []);
+            setMenuItems(cachedItems || []);
+            if (cachedCats?.length > 0) setActiveCategory(cachedCats[0].id);
+            setUsingCachedMenu(true);
+          } catch (parseErr) {
+            console.error('Error reading cached menu:', parseErr);
+          }
+        }
+      }
     } finally {
       setLoading(false);
     }
@@ -239,6 +263,11 @@ const MenuCatalog = () => {
             {selectedTable ? `Ordering for Table ${selectedTable.id} (${selectedTable.guest || 'Walk-in'})` : 'Select a table to start ordering'}
           </p>
         </div>
+        {usingCachedMenu && (
+          <div className="menu-view__offline-banner" id="menu-offline-banner">
+            Offline — showing menu from last sync. Item availability may be out of date.
+          </div>
+        )}
       </div>
 
       <div className="menu-view">
