@@ -76,6 +76,30 @@
   50% { box-shadow: 0 0 0 6px rgba(46, 158, 90, 0.08); }
 }
 
+/* ---- Offline / Sync pills ---- */
+.topbar__offline-pill,
+.topbar__syncing-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+}
+
+.topbar__offline-pill {
+  background: rgba(239, 68, 68, 0.1);
+  color: #b91c1c;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.topbar__syncing-pill {
+  background: rgba(217, 119, 6, 0.1);
+  color: #b45309;
+  border: 1px solid rgba(217, 119, 6, 0.25);
+}
+
 /* ---- Right Actions ---- */
 .topbar__actions {
   display: flex;

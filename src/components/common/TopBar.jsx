@@ -1,17 +1,19 @@
 import { useState } from 'react';
-import { Search, RefreshCw, Settings, Bell, Smartphone } from 'lucide-react';
+import { Search, RefreshCw, Settings, Bell, Smartphone, WifiOff, CloudUpload } from 'lucide-react';
 import { useRestaurant } from '../../context/useRestaurant';
 import EndShiftModal from '../modals/EndShiftModal';
 import './TopBar.css';
 
 function TopBar() {
-  const { 
-    createWaiterCall, 
-    refresh, 
-    setShowCustomerSim, 
-    generateShiftReport, 
-    isShiftActive, 
-    startShift 
+  const {
+    createWaiterCall,
+    refresh,
+    setShowCustomerSim,
+    generateShiftReport,
+    isShiftActive,
+    startShift,
+    isOnline,
+    pendingSyncCount
   } = useRestaurant();
   const [showEndShiftModal, setShowEndShiftModal] = useState(false);
   const [reportData, setReportData] = useState(null);
@@ -53,6 +55,19 @@ function TopBar() {
         <div className="topbar__status-dot" style={{ backgroundColor: isShiftActive ? '#10b981' : '#ef4444', boxShadow: isShiftActive ? '0 0 0 3px rgba(16, 185, 129, 0.15)' : '0 0 0 3px rgba(239, 68, 68, 0.15)' }} />
         <span>Status: {isShiftActive ? 'Shift Active' : 'Shift Ended'}</span>
       </div>
+
+      {!isOnline && (
+        <div className="topbar__offline-pill" id="topbar-offline-indicator" title="No internet connection — your changes are being saved on this device and will sync automatically once you're back online.">
+          <WifiOff size={14} />
+          <span>Offline{pendingSyncCount > 0 ? ` — ${pendingSyncCount} pending` : ''}</span>
+        </div>
+      )}
+      {isOnline && pendingSyncCount > 0 && (
+        <div className="topbar__syncing-pill" id="topbar-syncing-indicator" title="Connection is back — sending changes that were saved while offline.">
+          <CloudUpload size={14} className="animate-pulse" />
+          <span>Syncing {pendingSyncCount}...</span>
+        </div>
+      )}
 
       {/* Actions */}
       <div className="topbar__actions">

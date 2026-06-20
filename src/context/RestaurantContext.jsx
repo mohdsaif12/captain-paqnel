@@ -1,9 +1,11 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { supabase, isMockMode } from '../lib/supabase';
 import {
   tables as mockTables,
   waitlistData as mockWaitlistData
 } from '../data/mockData';
+import { enqueueAction, getQueuedActions, removeQueuedAction, recordAttemptFailure, queueCount, makeId } from '../lib/offlineQueue';
+import { isNetworkError } from '../lib/networkError';
 
 const RestaurantContext = createContext();
 export { RestaurantContext };
@@ -183,6 +185,19 @@ export function RestaurantProvider({ children }) {
   });
   const [shiftReports, setShiftReports] = useState([]);
   const [resolvedCalls, setResolvedCalls] = useState([]);
+  const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
+  const [pendingSyncCount, setPendingSyncCount] = useState(0);
+  const isDrainingRef = useRef(false);
+
+  const refreshPendingCount = async () => {
+    if (isMockMode) return;
+    try {
+      const count = await queueCount();
+      setPendingSyncCount(count);
+    } catch (err) {
+      console.error('Error reading offline queue count:', err);
+    }
+  };
 
   const startShift = () => {
     const nowIso = new Date().toISOString();
@@ -777,48 +792,78 @@ export function RestaurantProvider({ children }) {
       }
     }
 
+    const { customerName, phoneNumber, numberOfPeople, arrivalStatus, waitlistId, waiter } = customerData;
+    const sessionId = makeId();
+    const payload = { sessionId, tableDbId, customerName, phoneNumber, numberOfPeople, arrivalStatus, waiter, waitlistId };
+
     try {
-      const { customerName, phoneNumber, numberOfPeople, arrivalStatus, waitlistId, waiter } = customerData;
-
-      const insertData = {
-        table_id: tableDbId,
-        customer_name: customerName,
-        phone_number: phoneNumber,
-        guest_count: parseInt(numberOfPeople),
-        session_status: 'active'
-      };
-
-      if (waiter) {
-        insertData.server_name = waiter;
-      }
-
-      const { data: session, error: sessionError } = await supabase
-        .from('customer_sessions')
-        .insert([insertData])
-        .select()
-        .single();
-
-      if (sessionError) throw sessionError;
-
-      const { error: tableError } = await supabase
-        .from('restaurant_tables')
-        .update({ status: arrivalStatus === 'seated' ? 'occupied' : 'reserved' })
-        .eq('id', tableDbId);
-
-      if (tableError) throw tableError;
-
-      if (waitlistId) {
-        await supabase
-          .from('waiting_list')
-          .delete()
-          .eq('id', waitlistId);
-      }
-
+      await realAssignTable(payload);
       await fetchData();
       return { success: true };
     } catch (err) {
+      if (isNetworkError(err)) {
+        applyAssignTableOptimistic(payload);
+        await enqueueAction('assignTable', payload);
+        await refreshPendingCount();
+        return { success: true, queued: true };
+      }
       console.error('Error assigning table:', err);
       return { success: false, error: err.message };
+    }
+  };
+
+  // ---- Pure Supabase write for assignTable; used both for the live call
+  // and for replaying a queued offline action later. ----
+  const realAssignTable = async (payload) => {
+    const { sessionId, tableDbId, customerName, phoneNumber, numberOfPeople, arrivalStatus, waiter, waitlistId } = payload;
+
+    const insertData = {
+      id: sessionId,
+      table_id: tableDbId,
+      customer_name: customerName,
+      phone_number: phoneNumber,
+      guest_count: parseInt(numberOfPeople),
+      session_status: 'active'
+    };
+    if (waiter) {
+      insertData.server_name = waiter;
+    }
+
+    const { error: sessionError } = await supabase
+      .from('customer_sessions')
+      .upsert([insertData], { onConflict: 'id' });
+    if (sessionError) throw sessionError;
+
+    const { error: tableError } = await supabase
+      .from('restaurant_tables')
+      .update({ status: arrivalStatus === 'seated' ? 'occupied' : 'reserved' })
+      .eq('id', tableDbId);
+    if (tableError) throw tableError;
+
+    if (waitlistId) {
+      await supabase.from('waiting_list').delete().eq('id', waitlistId);
+    }
+  };
+
+  const applyAssignTableOptimistic = (payload) => {
+    const { sessionId, tableDbId, customerName, phoneNumber, numberOfPeople, arrivalStatus, waiter, waitlistId } = payload;
+    setTables(prev => prev.map(t => t.dbId === tableDbId ? {
+      ...t,
+      status: arrivalStatus === 'seated' ? 'occupied' : 'reserved',
+      guest: customerName,
+      phone: phoneNumber || null,
+      seated: parseInt(numberOfPeople),
+      startedAt: new Date().toISOString(),
+      time: '0 mins',
+      sessionId,
+      server: waiter || null,
+      mergedInto: null,
+      billDiscount: null,
+      kots: [],
+      orders: []
+    } : t));
+    if (waitlistId) {
+      setWaitingList(prev => prev.filter(item => item.id !== waitlistId));
     }
   };
 
@@ -1023,34 +1068,59 @@ export function RestaurantProvider({ children }) {
       }
     }
 
+    const cascadeIds = tables.filter(t => t.mergedInto === tableDbId).map(t => t.dbId);
+    const allIds = [tableDbId, ...cascadeIds];
+    const payload = { allIds };
+
     try {
-      const cascadeIds = tables.filter(t => t.mergedInto === tableDbId).map(t => t.dbId);
-      const allIds = [tableDbId, ...cascadeIds];
-
-      const { error: sessionError } = await supabase
-        .from('customer_sessions')
-        .update({
-          session_status: 'completed',
-          ended_at: new Date().toISOString()
-        })
-        .in('table_id', allIds)
-        .eq('session_status', 'active');
-
-      if (sessionError) throw sessionError;
-
-      const { error: tableError } = await supabase
-        .from('restaurant_tables')
-        .update({ status: 'available', merged_into: null, bill_discount_type: null, bill_discount_value: 0 })
-        .in('id', allIds);
-
-      if (tableError) throw tableError;
-
+      await realFreeTable(payload);
       await fetchData();
       return { success: true };
     } catch (err) {
+      if (isNetworkError(err)) {
+        applyFreeTableOptimistic(allIds);
+        await enqueueAction('freeTable', payload);
+        await refreshPendingCount();
+        return { success: true, queued: true };
+      }
       console.error('Error freeing table:', err);
       return { success: false, error: err.message };
     }
+  };
+
+  const realFreeTable = async (payload) => {
+    const { allIds } = payload;
+
+    const { error: sessionError } = await supabase
+      .from('customer_sessions')
+      .update({ session_status: 'completed', ended_at: new Date().toISOString() })
+      .in('table_id', allIds)
+      .eq('session_status', 'active');
+    if (sessionError) throw sessionError;
+
+    const { error: tableError } = await supabase
+      .from('restaurant_tables')
+      .update({ status: 'available', merged_into: null, bill_discount_type: null, bill_discount_value: 0 })
+      .in('id', allIds);
+    if (tableError) throw tableError;
+  };
+
+  const applyFreeTableOptimistic = (allIds) => {
+    const idSet = new Set(allIds);
+    setTables(prev => prev.map(t => idSet.has(t.dbId) ? {
+      ...t,
+      status: 'available',
+      guest: null,
+      phone: null,
+      seated: 0,
+      startedAt: null,
+      time: '--',
+      sessionId: null,
+      mergedInto: null,
+      billDiscount: null,
+      kots: [],
+      orders: []
+    } : t));
   };
 
   const markBilling = async (tableDbId, discount = null) => {
@@ -1079,23 +1149,40 @@ export function RestaurantProvider({ children }) {
       }
     }
 
-    try {
-      const { error } = await supabase
-        .from('restaurant_tables')
-        .update({
-          status: 'payment',
-          bill_discount_type: discount?.type || null,
-          bill_discount_value: discount?.value || 0
-        })
-        .eq('id', tableDbId);
+    const payload = { tableDbId, discount };
 
-      if (error) throw error;
+    try {
+      await realMarkBilling(payload);
       await fetchData();
       return { success: true };
     } catch (err) {
+      if (isNetworkError(err)) {
+        applyMarkBillingOptimistic(payload);
+        await enqueueAction('markBilling', payload);
+        await refreshPendingCount();
+        return { success: true, queued: true };
+      }
       console.error('Error marking billing:', err);
       return { success: false, error: err.message };
     }
+  };
+
+  const realMarkBilling = async (payload) => {
+    const { tableDbId, discount } = payload;
+    const { error } = await supabase
+      .from('restaurant_tables')
+      .update({
+        status: 'payment',
+        bill_discount_type: discount?.type || null,
+        bill_discount_value: discount?.value || 0
+      })
+      .eq('id', tableDbId);
+    if (error) throw error;
+  };
+
+  const applyMarkBillingOptimistic = (payload) => {
+    const { tableDbId, discount } = payload;
+    setTables(prev => prev.map(t => t.dbId === tableDbId ? { ...t, status: 'payment', billDiscount: discount } : t));
   };
 
   const createOrder = async (tableDbId, orderItems) => {
@@ -1150,63 +1237,100 @@ export function RestaurantProvider({ children }) {
       }
     }
 
+    const targetTable = tables.find(t => t.dbId === tableDbId);
+    if (!targetTable) {
+      return { success: false, error: 'Table not found.' };
+    }
+    if (targetTable.status === 'payment') {
+      return { success: false, error: 'This table has already been sent for billing. Free it or contact admin before adding more items.' };
+    }
+    const validSessionId = targetTable?.sessionId;
+    if (!validSessionId) {
+      return { success: false, error: 'No active session found for this table. Please seat a guest first.' };
+    }
+
+    const orderId = makeId();
+    const subtotal = orderItems.reduce((acc, item) => acc + (item.price * item.qty), 0);
+    const tax = subtotal * 0.1;
+    const total = subtotal + tax;
+    // Each line item gets its own client-generated id up front (separate from
+    // item.id, which is the *menu* item being ordered) — that's what makes a
+    // replayed insert safe to repeat instead of risking a duplicate KOT.
+    const itemsWithIds = orderItems.map(item => ({ ...item, orderItemId: makeId() }));
+    const payload = { orderId, sessionId: validSessionId, tableDbId, items: itemsWithIds, subtotal, tax, total };
+
     try {
-      const targetTable = tables.find(t => t.dbId === tableDbId);
-      if (!targetTable) {
-        throw new Error('Table not found.');
-      }
-      if (targetTable.status === 'payment') {
-        return { success: false, error: 'This table has already been sent for billing. Free it or contact admin before adding more items.' };
-      }
-      const validSessionId = targetTable?.sessionId;
-
-      if (!validSessionId) {
-        throw new Error('No active session found for this table. Please seat a guest first.');
-      }
-
-      const subtotal = orderItems.reduce((acc, item) => acc + (item.price * item.qty), 0);
-      const tax = subtotal * 0.1;
-      const total = subtotal + tax;
-
-      const { data: order, error: orderError } = await supabase
-        .from('orders')
-        .insert([{
-          session_id: validSessionId,
-          order_status: 'preparing',
-          subtotal,
-          tax,
-          total,
-          table_id: tableDbId
-        }])
-        .select()
-        .single();
-
-      if (orderError) throw orderError;
-
-      const orderItemsToInsert = orderItems.map(item => ({
-        order_id: order.id,
-        menu_item_id: item.id,
-        quantity: item.qty,
-        item_price: item.price,
-        total_price: item.price * item.qty,
-        notes: item.notes || null
-      }));
-
-      const { error: itemsError } = await supabase
-        .from('order_items')
-        .insert(orderItemsToInsert);
-
-      if (itemsError) throw itemsError;
-
+      const order = await realCreateOrder(payload);
       await fetchData();
       return {
         success: true,
         kot: { id: order.id, createdAt: order.created_at, items: orderItems }
       };
     } catch (err) {
+      if (isNetworkError(err)) {
+        applyCreateOrderOptimistic(tableDbId, orderItems, orderId);
+        await enqueueAction('createOrder', payload);
+        await refreshPendingCount();
+        return {
+          success: true,
+          queued: true,
+          kot: { id: orderId, createdAt: new Date().toISOString(), items: orderItems }
+        };
+      }
       console.error('Error creating order:', err);
       return { success: false, error: err.message };
     }
+  };
+
+  const realCreateOrder = async (payload) => {
+    const { orderId, sessionId, tableDbId, items, subtotal, tax, total } = payload;
+
+    const { data: order, error: orderError } = await supabase
+      .from('orders')
+      .upsert([{ id: orderId, session_id: sessionId, order_status: 'preparing', subtotal, tax, total, table_id: tableDbId }], { onConflict: 'id' })
+      .select()
+      .single();
+    if (orderError) throw orderError;
+
+    const orderItemsToInsert = items.map(item => ({
+      id: item.orderItemId,
+      order_id: order.id,
+      menu_item_id: item.id,
+      quantity: item.qty,
+      item_price: item.price,
+      total_price: item.price * item.qty,
+      notes: item.notes || null
+    }));
+
+    const { error: itemsError } = await supabase
+      .from('order_items')
+      .upsert(orderItemsToInsert, { onConflict: 'id' });
+    if (itemsError) throw itemsError;
+
+    return order;
+  };
+
+  const applyCreateOrderOptimistic = (tableDbId, orderItems, orderId) => {
+    setTables(prev => prev.map(t => {
+      if (t.dbId !== tableDbId) return t;
+      const existingKots = t.kots || [];
+      const newKot = {
+        id: orderId,
+        kotNumber: existingKots.length + 1,
+        createdAt: new Date().toISOString(),
+        items: orderItems.map(item => ({
+          id: makeId(),
+          name: item.name,
+          qty: item.qty,
+          price: item.price,
+          notes: item.notes || '',
+          cancelled: false,
+          cancelReason: null
+        }))
+      };
+      const updatedKots = [...existingKots, newKot];
+      return { ...t, status: 'occupied', kots: updatedKots, orders: flattenKots(updatedKots) };
+    }));
   };
 
   const cancelOrderItem = async (tableDbId, itemId, reason) => {
@@ -1247,24 +1371,67 @@ export function RestaurantProvider({ children }) {
       }
     }
 
-    try {
-      const { data: updated, error } = await supabase
-        .from('order_items')
-        .update({ is_cancelled: true, cancel_reason: reason, cancelled_at: new Date().toISOString() })
-        .eq('id', itemId)
-        .select('*, menu_items ( item_name )')
-        .single();
+    const payload = { itemId, reason };
 
-      if (error) throw error;
+    try {
+      const updated = await realCancelOrderItem(payload);
       await fetchData();
       return {
         success: true,
         item: { name: updated.menu_items?.item_name, qty: updated.quantity, price: updated.item_price, cancelReason: reason }
       };
     } catch (err) {
+      if (isNetworkError(err)) {
+        const localItem = findKotItemLocally(tableDbId, itemId);
+        applyCancelOrderItemOptimistic(tableDbId, itemId, reason);
+        await enqueueAction('cancelOrderItem', payload);
+        await refreshPendingCount();
+        return {
+          success: true,
+          queued: true,
+          item: localItem ? { ...localItem, cancelReason: reason } : { name: 'Item', qty: 1, cancelReason: reason }
+        };
+      }
       console.error('Error cancelling item:', err);
       return { success: false, error: err.message };
     }
+  };
+
+  // Cancellation is a plain update (no insert), so it's naturally safe to
+  // replay as-is — no client-generated id needed for this one.
+  const realCancelOrderItem = async (payload) => {
+    const { itemId, reason } = payload;
+    const { data: updated, error } = await supabase
+      .from('order_items')
+      .update({ is_cancelled: true, cancel_reason: reason, cancelled_at: new Date().toISOString() })
+      .eq('id', itemId)
+      .select('*, menu_items ( item_name )')
+      .single();
+    if (error) throw error;
+    return updated;
+  };
+
+  const findKotItemLocally = (tableDbId, itemId) => {
+    const table = tables.find(t => t.dbId === tableDbId);
+    if (!table) return null;
+    for (const kot of table.kots || []) {
+      const found = (kot.items || []).find(i => i.id === itemId);
+      if (found) return { name: found.name, qty: found.qty, price: found.price, notes: found.notes };
+    }
+    return null;
+  };
+
+  const applyCancelOrderItemOptimistic = (tableDbId, itemId, reason) => {
+    setTables(prev => prev.map(t => {
+      if (t.dbId !== tableDbId) return t;
+      const kots = (t.kots || []).map(k => ({
+        ...k,
+        items: (k.items || []).map(item => item.id === itemId
+          ? { ...item, cancelled: true, cancelReason: reason, cancelledAt: new Date().toISOString() }
+          : item)
+      }));
+      return { ...t, kots, orders: flattenKots(kots) };
+    }));
   };
 
   const mergeTables = async (primaryDbId, secondaryDbId) => {
@@ -1447,6 +1614,134 @@ export function RestaurantProvider({ children }) {
     }
   };
 
+  const completeWaiterCall = async (callId) => {
+    if (isMockMode) {
+      try {
+        const data = loadMockData();
+        data.waiterCalls = data.waiterCalls.map(c => {
+          if (c.id === callId) {
+            return { ...c, request_status: 'completed', completed_at: new Date().toISOString() };
+          }
+          return c;
+        });
+        localStorage.setItem('mock_waiter_calls', JSON.stringify(data.waiterCalls));
+        fetchData();
+        fetchResolvedCalls();
+      } catch (err) {
+        console.error('Error completing waiter call in mock mode:', err);
+      }
+      return { success: true };
+    }
+
+    const payload = { callId };
+    try {
+      await realCompleteWaiterCall(payload);
+      await fetchData();
+      await fetchResolvedCalls();
+      return { success: true };
+    } catch (err) {
+      if (isNetworkError(err)) {
+        setWaiterCalls(prev => prev.filter(c => c.id !== callId));
+        await enqueueAction('completeWaiterCall', payload);
+        await refreshPendingCount();
+        return { success: true, queued: true };
+      }
+      console.error('Error completing waiter call:', err);
+      return { success: false, error: err.message };
+    }
+  };
+
+  const realCompleteWaiterCall = async (payload) => {
+    const { error } = await supabase
+      .from('waiter_calls')
+      .update({ request_status: 'completed', completed_at: new Date().toISOString() })
+      .eq('id', payload.callId);
+    if (error) throw error;
+  };
+
+  // ---- Offline queue draining ----
+  const replayHandlers = {
+    createOrder: realCreateOrder,
+    assignTable: realAssignTable,
+    freeTable: realFreeTable,
+    markBilling: realMarkBilling,
+    cancelOrderItem: realCancelOrderItem,
+    completeWaiterCall: realCompleteWaiterCall,
+  };
+
+  const drainOfflineQueue = async () => {
+    if (isMockMode || isDrainingRef.current) return;
+    isDrainingRef.current = true;
+    try {
+      let queue = await getQueuedActions();
+      let drainedAny = false;
+      while (queue.length > 0) {
+        const action = queue[0];
+        const handler = replayHandlers[action.type];
+        if (!handler) {
+          console.warn('Dropping unknown queued offline action type:', action.type);
+          await removeQueuedAction(action.id);
+          queue = queue.slice(1);
+          continue;
+        }
+        try {
+          await handler(action.payload);
+          await removeQueuedAction(action.id);
+          drainedAny = true;
+          queue = queue.slice(1);
+        } catch (err) {
+          await recordAttemptFailure(action.id, err.message);
+          // Still failing — likely still offline, or a transient server hiccup.
+          // Stop here and leave the rest queued in their original order;
+          // the next online event / retry timer will pick up where we left off.
+          break;
+        }
+      }
+      await refreshPendingCount();
+      if (drainedAny) {
+        await fetchData();
+      }
+    } finally {
+      isDrainingRef.current = false;
+    }
+  };
+
+  useEffect(() => {
+    if (isMockMode) return;
+
+    refreshPendingCount();
+
+    const handleOnline = () => {
+      setIsOnline(true);
+      drainOfflineQueue();
+    };
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    // navigator.onLine and the 'online' event both lie sometimes (link-layer
+    // connected but no real route out, or the event just never fires) — a
+    // periodic retry is the safety net for anything left queued.
+    const retryInterval = setInterval(() => {
+      if (navigator.onLine) {
+        drainOfflineQueue();
+      }
+    }, 20000);
+
+    // Also try once on load, in case the tablet was restarted mid-outage and
+    // there's leftover queue from before this session even started.
+    if (navigator.onLine) {
+      drainOfflineQueue();
+    }
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+      clearInterval(retryInterval);
+    };
+  }, []);
+
   return (
     <RestaurantContext.Provider value={{
       tables,
@@ -1456,6 +1751,8 @@ export function RestaurantProvider({ children }) {
       loading,
       error,
       waiterCalls,
+      isOnline,
+      pendingSyncCount,
       showCustomerSim,
       setShowCustomerSim,
       shiftStart,
@@ -1479,32 +1776,7 @@ export function RestaurantProvider({ children }) {
       mergeTables,
       unmergeTable,
       transferTable,
-      completeWaiterCall: async (callId) => {
-        if (isMockMode) {
-          try {
-            const data = loadMockData();
-            data.waiterCalls = data.waiterCalls.map(c => {
-              if (c.id === callId) {
-                return { ...c, request_status: 'completed', completed_at: new Date().toISOString() };
-              }
-              return c;
-            });
-            localStorage.setItem('mock_waiter_calls', JSON.stringify(data.waiterCalls));
-            fetchData();
-            fetchResolvedCalls();
-          } catch (err) {
-            console.error('Error completing waiter call in mock mode:', err);
-          }
-          return;
-        }
-
-        await supabase
-          .from('waiter_calls')
-          .update({ request_status: 'completed', completed_at: new Date().toISOString() })
-          .eq('id', callId);
-        await fetchData();
-        await fetchResolvedCalls();
-      }
+      completeWaiterCall
     }}>
       {children}
     </RestaurantContext.Provider>
