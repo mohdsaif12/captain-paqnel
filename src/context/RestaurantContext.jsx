@@ -723,12 +723,12 @@ export function RestaurantProvider({ children }) {
     // captain panel always reflects the latest state from admin or other sources.
     const tablesSubscription = supabase
       .channel('restaurant_changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'restaurant_tables' }, () => fetchData())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'customer_sessions' }, () => fetchData())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'waiting_list' }, () => fetchData())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'waiter_calls' }, () => fetchData())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => fetchData())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, () => fetchData())
+      .on('postgres_changes', { event: '*', table: 'restaurant_tables' }, () => fetchData())
+      .on('postgres_changes', { event: '*', table: 'customer_sessions' }, () => fetchData())
+      .on('postgres_changes', { event: '*', table: 'waiting_list' }, () => fetchData())
+      .on('postgres_changes', { event: '*', table: 'waiter_calls' }, () => fetchData())
+      .on('postgres_changes', { event: '*', table: 'orders' }, () => fetchData())
+      .on('postgres_changes', { event: '*', table: 'order_items' }, () => fetchData())
       .subscribe((status) => {
         console.log('[Realtime] subscription status:', status);
       });
